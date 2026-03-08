@@ -106,11 +106,11 @@
             <h2 class="text-lg font-bold mb-4 text-gray-800">ทำรายการ เบิก / รับเข้า</h2>
             
             <div class="flex gap-2 mb-5 p-1 bg-gray-200 rounded-lg">
-                <button @click="form.type = 'in'" :class="form.type === 'in' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2.5 rounded-md font-bold text-sm transition-all duration-200 flex justify-center items-center">
-                    <i class="fas fa-arrow-down mr-2"></i> รับเข้า
-                </button>
                 <button @click="form.type = 'out'" :class="form.type === 'out' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2.5 rounded-md font-bold text-sm transition-all duration-200 flex justify-center items-center">
                     <i class="fas fa-arrow-up mr-2"></i> เบิกออก
+                </button>
+                <button @click="form.type = 'in'" :class="form.type === 'in' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2.5 rounded-md font-bold text-sm transition-all duration-200 flex justify-center items-center">
+                    <i class="fas fa-arrow-down mr-2"></i> รับเข้า
                 </button>
             </div>
 
@@ -318,7 +318,7 @@
                 products: [], // จะถูกโหลดจาก Google Sheets
                 history: [],
                 form: {
-                    type: 'in',
+                    type: 'out',
                     productId: '',
                     qty: null,
                     user: ''
@@ -370,6 +370,7 @@
                 this.showDropdown = false;
                 this.form.productId = ''; // เคลียร์สินค้าที่เลือกค้างไว้
                 this.form.qty = null;
+                this.form.type = 'out'; // รีเซ็ตให้กลับมาเป็น เบิกออก เสมอ
             }
         },
         mounted() {
