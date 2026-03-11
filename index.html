@@ -18,6 +18,64 @@
 </head>
 <body class="text-gray-800">
 
+<!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
+<script>
+    // 1. ตั้งค่าชื่อแอปพลิเคชันนี้
+    const CURRENT_APP_NAME = "AKRA W5"; 
+    
+    // URL ของ Google Apps Script (ตัวเดียวกับหน้า Main)
+    const GOOGLE_APP_SCRIPT_URL_MAIN = "https://script.google.com/macros/s/AKfycbw5PCJ1OlxCQR6zaNubrmZTgaORB-rJK2Ow5_YC3i5kKv-BrrTgJkTJyNZKrzfodK1m/exec";
+
+    // 2. ดึงชื่อผู้ใช้จาก URL (ที่หน้า Main ส่งมาให้)
+    const urlParams = new URLSearchParams(window.location.search);
+    let currentUser = urlParams.get('user');
+
+    if (currentUser) {
+        // ถ้ามีชื่อส่งมา ให้จำค่าไว้ใน sessionStorage (เผื่อผู้ใช้กด Refresh หน้าเว็บ จะได้ไม่หลุด)
+        sessionStorage.setItem('active_user', currentUser);
+        
+        // ลบ ?user=... ออกจาก URL เพื่อให้ URL ดูสะอาดตา (Optional)
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+        // ถ้าไม่มีใน URL ให้ลองหาในสิ่งที่จำไว้
+        currentUser = sessionStorage.getItem('active_user');
+    }
+
+    // 3. ระบบรักษาความปลอดภัย: ถ้าไม่มีชื่อผู้ใช้เลย แปลว่าแอบเข้าลิงก์ตรงๆ ไม่ผ่านหน้า Main
+    if (!currentUser) {
+        // ป้องกัน Error ตอนพรีวิวโค้ดในระบบ แต่ของจริงจะเด้งกลับไปหน้า Main
+        if (window.self !== window.top) {
+            currentUser = "Tester (โหมดจำลอง)"; 
+        } else {
+            alert("กรุณาเข้าสู่ระบบผ่านหน้า Main ก่อนใช้งานครับ");
+            // เด้งกลับไปหน้า Main ทันที
+            window.location.href = "https://akra-web.github.io/Main/"; 
+        }
+    } else {
+        console.log("ยินดีต้อนรับคุณ: " + currentUser);
+    }
+
+    // 4. ฟังก์ชันสำหรับบันทึก Log การทำงานในแอปนี้
+    window.sendAppLog = function(action, details) {
+        const payload = {
+            user: currentUser,
+            action: action,
+            app: CURRENT_APP_NAME,
+            details: details
+        };
+
+        fetch(GOOGLE_APP_SCRIPT_URL_MAIN, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }).then(() => {
+            console.log(`บันทึก Log สำเร็จ: ${action} โดย ${currentUser}`);
+        }).catch(err => console.error(err));
+    }
+</script>
+<!-- ========================================================== -->
+
 <div id="app" class="max-w-md mx-auto bg-gray-50 min-h-screen shadow-lg relative pb-20 overflow-x-hidden">
     
     <!-- Offline Banner -->
@@ -32,8 +90,12 @@
     </div>
 
     <!-- Header -->
-    <header class="bg-blue-700 text-white p-4 sticky top-0 z-10 shadow-md flex justify-center items-center">
+    <header class="bg-blue-700 text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
         <h1 class="text-xl font-bold"><i class="fas fa-warehouse mr-2"></i> คลังสินค้า W5</h1>
+        <div class="text-xs bg-blue-800 px-3 py-1.5 rounded-full flex items-center shadow-inner">
+            <i class="fas fa-user-circle mr-1.5 text-blue-300 text-sm"></i>
+            <span id="showUserName" class="font-semibold">{{ loggedInUser }}</span>
+        </div>
     </header>
 
     <!-- Main Content -->
@@ -164,10 +226,11 @@
                 </div>
 
                 <div>
+                    <!-- อัปเดตให้ดึงชื่อจากระบบมาใส่ และป้องกันการแก้ไข -->
                     <label class="block text-sm font-semibold text-gray-700 mb-1">ชื่อพนักงานผู้ทำรายการ <span class="text-red-500">*</span></label>
                     <div class="relative">
-                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-user"></i></span>
-                        <input type="text" v-model="form.user" class="w-full border-gray-300 border p-3 pl-9 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="ระบุชื่อของคุณ...">
+                        <span class="absolute left-3 top-3 text-gray-500"><i class="fas fa-user-check"></i></span>
+                        <input type="text" v-model="form.user" readonly class="w-full border-gray-300 border p-3 pl-9 rounded-lg text-sm bg-gray-200 text-gray-600 outline-none cursor-not-allowed font-semibold shadow-inner">
                     </div>
                 </div>
 
@@ -283,11 +346,10 @@
 <script>
     const { createApp } = Vue;
 
-    // === URL ของ Google Web App ที่เชื่อมต่อกับ Sheet "W5" ===
+    // === URL ของ Google Web App ที่เชื่อมต่อกับ Sheet "W5" (คนละอันกับระบบ Main) ===
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbztG6wrhwAOPSaKyIL7cVgNObKYrB5HIWevTJXKa2HOp1vvvWD_PofSEyPA9bkmxeGy/exec"; 
     // ==========================================
 
-    // ข้อมูลเริ่มต้นเผื่อกรณีเปิดแบบ Offline
     const initialProductList = [
         "^Z/S) ถ้วยทาร์ตโปรตุเกส โอคุน #206 (ลัง11x60x9.5g)", "^Z/ครีมเมอร์ Rich's กล่องฟ้า (ลัง24x454g)", "^Z/ถ้วยทาร์ตโปรตุเกส โอคุน #207 (ลัง10x40x20g)",
         "^Z/น้ำทาร์ต พรีมีโอ ทาร์ตฟิลลิ่ง (ลัง12x907g)", "^Z/บลูเบอร์รี่ แช่แข็ง ถุงเปลือย (ลัง10x1kg)", "^Z/มอสเซเรล่าชีส แบบขูด Valla (ลัง12x1kg)",
@@ -314,14 +376,15 @@
     createApp({
         data() {
             return {
+                loggedInUser: currentUser || 'Guest', // ดึงข้อมูลผู้ใช้จาก Script ด้านบน
                 activeTab: 'dashboard',
-                products: [], // จะถูกโหลดจาก Google Sheets
+                products: [], 
                 history: [],
                 form: {
                     type: 'out',
                     productId: '',
                     qty: null,
-                    user: ''
+                    user: currentUser || '' // ใส่ชื่อลงในฟอร์มเบิก-รับอัตโนมัติ
                 },
                 newProductName: '',
                 searchDashboard: '',
@@ -363,14 +426,13 @@
         },
         watch: {
             activeTab() {
-                // เคลียร์คำค้นหาเมื่อเปลี่ยนหน้า
                 this.searchDashboard = '';
                 this.searchTransaction = '';
                 this.searchManage = '';
                 this.showDropdown = false;
-                this.form.productId = ''; // เคลียร์สินค้าที่เลือกค้างไว้
+                this.form.productId = ''; 
                 this.form.qty = null;
-                this.form.type = 'out'; // รีเซ็ตให้กลับมาเป็น เบิกออก เสมอ
+                this.form.type = 'out'; 
             }
         },
         mounted() {
@@ -381,10 +443,7 @@
                 if (!dateString) return '';
                 try {
                     const date = new Date(dateString);
-                    // หากแปลงเป็นรูปแบบเวลาไม่ได้ (เช่นข้อมูลเก่า) ให้แสดงค่าเดิม
                     if (isNaN(date.getTime())) return dateString; 
-                    
-                    // แปลงเป็น วัน/เดือน/ปี - เวลา (บังคับโซนไทยเสมอ)
                     return date.toLocaleString('en-GB', { 
                         timeZone: 'Asia/Bangkok',
                         day: '2-digit', 
@@ -400,7 +459,7 @@
             },
             handleSearchInput() {
                 this.showDropdown = true;
-                this.form.productId = ''; // รีเซ็ต ID สินค้าหากผู้ใช้พิมพ์ค้นหาใหม่
+                this.form.productId = ''; 
             },
             selectTransactionProduct(product) {
                 this.form.productId = product.id;
@@ -478,8 +537,6 @@
             async confirmTransaction() {
                 const product = this.products.find(p => p.id === this.form.productId);
                 const qty = parseInt(this.form.qty);
-                
-                // ใช้ค่าเวลาสากลส่งไปบันทึก เพื่อให้ Google Sheets เก็บเป็น Date Format ที่สมบูรณ์
                 const timeStr = new Date().toISOString(); 
                 
                 const success = await this.apiCall({
@@ -503,6 +560,12 @@
                         user: this.form.user.trim(),
                         time: timeStr
                     });
+
+                    // 5. บันทึก Log การเบิก/รับ ผ่านระบบ Main (ถ้ามีฟังก์ชัน sendAppLog)
+                    const actionName = this.form.type === 'in' ? 'รับเข้า' : 'เบิกออก';
+                    if (window.sendAppLog) {
+                        window.sendAppLog(`ทำรายการ${actionName} W5`, `${product.name} จำนวน ${qty} ชิ้น`);
+                    }
 
                     this.form.productId = '';
                     this.form.qty = null;
@@ -537,12 +600,17 @@
 
                 if (success) {
                     this.products.unshift(newProduct);
+                    
+                    // บันทึก Log การเพิ่มสินค้าใหม่
+                    if (window.sendAppLog) window.sendAppLog('เพิ่มสินค้าใหม่', `เพิ่ม ${this.newProductName.trim()} เข้าคลัง W5`);
+
                     this.newProductName = '';
                     this.triggerToast('เพิ่มสินค้าใหม่เรียบร้อย');
                 }
             },
             async deleteProduct(id) {
-                if(confirm('ยืนยันการลบสินค้ารายการนี้ออกจากคลัง?')) {
+                const productToDelete = this.products.find(p => p.id === id);
+                if(confirm(`ยืนยันการลบ ${productToDelete.name} ออกจากคลัง?`)) {
                     const success = await this.apiCall({
                         action: 'deleteProduct',
                         productId: id
@@ -550,6 +618,10 @@
 
                     if (success) {
                         this.products = this.products.filter(p => p.id !== id);
+                        
+                        // บันทึก Log การลบสินค้า
+                        if (window.sendAppLog) window.sendAppLog('ลบสินค้า', `ลบ ${productToDelete.name} ออกจากคลัง W5`);
+
                         this.triggerToast('ลบสินค้าสำเร็จ');
                     }
                 }
