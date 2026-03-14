@@ -122,18 +122,24 @@
             </h2>
             <div class="bg-white border rounded-lg overflow-hidden shadow-sm mb-6">
                 <ul v-if="history.length > 0" class="divide-y max-h-60 overflow-y-auto">
-                    <li v-for="(log, index) in history.slice().reverse()" :key="index" class="p-3 text-sm flex justify-between items-center hover:bg-gray-50 transition">
+                    <li v-for="(log, index) in reversedHistory" :key="index" class="p-3 text-sm flex justify-between items-center hover:bg-gray-50 transition">
                         <div class="flex-1 pr-2">
-                            <p class="font-semibold text-gray-800 line-clamp-1">{{ log.productName }}</p>
+                            <p class="font-semibold text-gray-800 line-clamp-1" :class="{'text-red-500 line-through': log.productName.includes('[ยกเลิก]')}">{{ log.productName }}</p>
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-user-circle text-gray-400 mr-1"></i>{{ log.user }} 
                                 <span class="mx-1 text-gray-300">|</span> 
                                 <i class="far fa-clock text-gray-400 mr-1"></i>{{ formatDate(log.time) }}
                             </p>
                         </div>
-                        <div :class="log.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="font-bold px-3 py-1 rounded-full text-xs whitespace-nowrap">
-                            <span v-if="log.type === 'in'"><i class="fas fa-arrow-down mr-1"></i>รับ {{ log.qty }}</span>
-                            <span v-else><i class="fas fa-arrow-up mr-1"></i>เบิก {{ log.qty }}</span>
+                        <div class="flex items-center gap-2">
+                            <div :class="log.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="font-bold px-3 py-1 rounded-full text-xs whitespace-nowrap shadow-sm">
+                                <span v-if="log.type === 'in'"><i class="fas fa-arrow-down mr-1"></i>รับ {{ log.qty }}</span>
+                                <span v-else><i class="fas fa-arrow-up mr-1"></i>เบิก {{ log.qty }}</span>
+                            </div>
+                            <!-- ปุ่มยกเลิกรายการ (แสดงเฉพาะรายการปกติ) -->
+                            <button v-if="!log.productName.includes('[ยกเลิก]')" @click="undoTransaction(log)" class="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition" title="ยกเลิกรายการนี้ (คืนยอดสต็อก)">
+                                <i class="fas fa-undo"></i>
+                            </button>
                         </div>
                     </li>
                 </ul>
@@ -323,11 +329,12 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button @click="showModal = false" class="flex-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-3 rounded-xl transition text-sm">
+                    <button @click="showModal = false" :disabled="isSubmitting" class="flex-1 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-bold py-3 rounded-xl transition text-sm disabled:opacity-50">
                         แก้ไขข้อมูล
                     </button>
-                    <button @click="confirmTransaction" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200 font-bold py-3 rounded-xl transition text-sm">
-                        ยืนยันบันทึก
+                    <button @click="confirmTransaction" :disabled="isSubmitting" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-200 font-bold py-3 rounded-xl transition text-sm disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center">
+                        <i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i>
+                        <span>{{ isSubmitting ? 'กำลังบันทึก...' : 'ยืนยันบันทึก' }}</span>
                     </button>
                 </div>
             </div>
@@ -395,10 +402,15 @@
                 showToast: false,
                 toastMessage: '',
                 isLoading: false,
+                isSubmitting: false, // ป้องกันการกดเบิ้ล
                 isOnline: WEB_APP_URL.trim() !== ''
             }
         },
         computed: {
+            reversedHistory() {
+                // แสดงประวัติล่าสุดขึ้นก่อน
+                return [...this.history].reverse();
+            },
             totalItemsInStock() {
                 return this.products.reduce((sum, p) => sum + p.stock, 0);
             },
@@ -513,6 +525,7 @@
                 }
             },
             verifyTransaction() {
+                if (this.isSubmitting) return; // ป้องกันการกดเบิ้ล
                 if (!this.form.productId) {
                     this.triggerToast('กรุณาเลือกสินค้า', true);
                     return;
@@ -535,6 +548,9 @@
                 this.showModal = true;
             },
             async confirmTransaction() {
+                if (this.isSubmitting) return; // ป้องกันการกดยืนยันเบิ้ล
+                this.isSubmitting = true;
+
                 const product = this.products.find(p => p.id === this.form.productId);
                 const qty = parseInt(this.form.qty);
                 const timeStr = new Date().toISOString(); 
@@ -576,6 +592,60 @@
                     this.activeTab = 'dashboard';
                     window.scrollTo(0, 0);
                 }
+                this.isSubmitting = false;
+            },
+            async undoTransaction(log) {
+                const actionName = log.type === 'in' ? 'รับเข้า' : 'เบิกออก';
+                if(!confirm(`ต้องการยกเลิกรายการ "${actionName} ${log.productName} จำนวน ${log.qty} ชิ้น" ใช่หรือไม่?\n\n(ระบบจะทำการปรับคืนยอดสต็อกให้อัตโนมัติ)`)) return;
+
+                if (this.isSubmitting) return;
+                this.isSubmitting = true;
+
+                // หาสินค้าจากชื่อในกรณีที่ประวัติไม่มี ID
+                let baseProductName = log.productName.replace(' [ยกเลิก]', ''); 
+                const product = this.products.find(p => p.name === baseProductName);
+                
+                if (!product) {
+                    this.triggerToast('ไม่พบข้อมูลสินค้านี้ในระบบ ไม่สามารถคืนยอดได้', true);
+                    this.isSubmitting = false;
+                    return;
+                }
+
+                // สลับประเภทรายการเพื่อคืนยอดกลับ (เช่น ถ้าเบิกออก ก็เปลี่ยนเป็นรับเข้าเพื่อชดเชย)
+                const reverseType = log.type === 'in' ? 'out' : 'in';
+                const timeStr = new Date().toISOString(); 
+
+                const success = await this.apiCall({
+                    action: 'transaction',
+                    productId: product.id,
+                    productName: product.name + ' [ยกเลิก]',
+                    type: reverseType,
+                    qty: log.qty,
+                    user: this.loggedInUser,
+                    time: timeStr
+                });
+
+                if (success) {
+                    // อัปเดตสต็อกในหน้าเว็บ
+                    if (reverseType === 'in') product.stock += log.qty;
+                    else product.stock -= log.qty;
+
+                    // บันทึกประวัติการยกเลิก
+                    this.history.push({
+                        type: reverseType,
+                        productName: product.name + ' [ยกเลิก]',
+                        qty: log.qty,
+                        user: this.loggedInUser,
+                        time: timeStr
+                    });
+
+                    if (window.sendAppLog) {
+                        window.sendAppLog(`ยกเลิกรายการ${actionName} W5`, `คืนยอด ${product.name} จำนวน ${log.qty} ชิ้น`);
+                    }
+
+                    this.triggerToast('ยกเลิกรายการและคืนยอดสำเร็จ');
+                }
+                this.isSubmitting = false;
             },
             getSelectedProductName() {
                 if(!this.form.productId) return '';
