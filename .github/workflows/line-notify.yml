@@ -1,0 +1,19 @@
+name: W5 Line Notify
+
+# ดักจับ Event ที่ชื่อ webapp_trigger จาก Web App ของเรา
+on:
+  repository_dispatch:
+    types: [webapp_trigger]
+
+jobs:
+  send_notification:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Message to LINE Notify
+        env:
+          # ดึง Token จากหน้า Settings > Secrets
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }} 
+          # ดึงข้อความที่ส่งมาจาก Google Sheets
+          MESSAGE: ${{ github.event.client_payload.message }} 
+        run: |
+          curl -X POST -H "Authorization: Bearer $LINE_TOKEN" -F "message=$MESSAGE" https://notify-api.line.me/api/notify
