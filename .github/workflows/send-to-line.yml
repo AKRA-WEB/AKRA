@@ -1,0 +1,33 @@
+name: Webapp to LINE Notification
+
+# 1. กำหนดให้ Action นี้ทำงานเมื่อมีคำสั่ง (repository_dispatch) ส่งมาจาก Webapp
+on:
+  repository_dispatch:
+    types: [webapp_trigger]
+
+jobs:
+  send-line-message:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push message to LINE Group
+        # 2. ดึงค่า Token และ Group ID ที่เราตั้งไว้ใน Settings > Secrets มาใช้งาน
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_ACCESS_TOKEN }}
+          GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+          # ดึงข้อความที่ Webapp แนบมาด้วย
+          MESSAGE_DATA: ${{ github.event.client_payload.message }}
+          
+        # 3. ใช้คำสั่ง curl เพื่อส่งข้อมูลไปยัง LINE API
+        run: |
+          curl -X POST https://api.line.me/v2/bot/message/push \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer $LINE_TOKEN" \
+          -d '{
+                "to": "'"$GROUP_ID"'",
+                "messages": [
+                  {
+                    "type": "text",
+                    "text": "'"$MESSAGE_DATA"'"
+                  }
+                ]
+              }'
