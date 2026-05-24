@@ -1,3 +1,4 @@
+<!-- GitHub Repo: https://github.com/AKRA-WEB/AKRA -->
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -540,7 +541,10 @@
 
 <script>
     const { createApp } = Vue;
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbznbgC3VLTU14rw_oPifAM10wETg9Eo1l5N0ezWfNFLeGiRKRhlxIV92dSpqndXS6ua/exec"; 
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbznbgC3VLTU14rw_oPifAM10wETg9Eo1l5N0ezWfNFLeGiRKRhlxIV92dSpqndXS6ua/exec";
+    const AKRA_CACHE_TTL = 5 * 60 * 1000;
+    function getCache(key, ttlMs) { try { const raw = localStorage.getItem(key); if (!raw) return null; const w = JSON.parse(raw); if (Date.now() - (w._ts||0) > ttlMs) { localStorage.removeItem(key); return null; } return w._d; } catch(e) { localStorage.removeItem(key); return null; } }
+    function setCache(key, data) { localStorage.setItem(key, JSON.stringify({ _ts: Date.now(), _d: data })); }
 
     createApp({
         data() {
@@ -663,15 +667,22 @@
             async loadData(silent = false) {
                 if (!this.isOnline) return;
                 this.isSilentLoading = silent;
-                if (!silent) this.isLoading = true;
+                const cached = getCache('AKRA_WMS_DATA', AKRA_CACHE_TTL);
+                if (cached && !silent) {
+                    if (cached.products) this.products = cached.products.sort((a,b) => a.name.localeCompare(b.name, 'th'));
+                    if (cached.history) this.history = cached.history;
+                    if (cached.pickList) this.pickList = cached.pickList;
+                } else if (!silent) {
+                    this.isLoading = true;
+                }
                 try {
                     const response = await fetch(WEB_APP_URL + '?action=getData');
                     const data = await response.json();
-                    if (data.products) this.products = data.products.sort((a,b) => a.name.localeCompare(b.name, 'th'));
+                    if (data.products) { this.products = data.products.sort((a,b) => a.name.localeCompare(b.name, 'th')); setCache('AKRA_WMS_DATA', data); }
                     if (data.history) this.history = data.history;
-                    if (data.pickList) this.pickList = data.pickList; 
+                    if (data.pickList) this.pickList = data.pickList;
                 } catch (error) {
-                    if(!silent) this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
+                    if (!silent && !cached) this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
                 } finally {
                     this.isLoading = false;
                     this.isSilentLoading = false;
