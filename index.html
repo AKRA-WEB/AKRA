@@ -44,7 +44,7 @@
     const MAIN_PORTAL_URL = "https://akra-web.github.io/Main/"; 
 
     // 2. กำหนดว่าแอปพลิเคชันนี้ ต้องการสิทธิ์อะไรบ้างถึงจะเข้าได้
-    const ALLOWED_ROLES = ["AKRA", "ADMIN"]; 
+    const ALLOWED_ROLES = ["AKRA", "ADMIN", "SUPERVISOR"];
 
     let appUser = null; 
     let currentUser = null; 
@@ -616,8 +616,11 @@
             }
         },
         mounted() {
-            if (typeof appUser !== 'undefined' && appUser !== null && appUser.roles) {
-                if (appUser.roles.includes('ADMIN')) this.isAdmin = true;
+            if (typeof appUser !== 'undefined' && appUser !== null) {
+                const appPerms = (appUser.perms && appUser.perms["app-akra"]) || [];
+                this.isAdmin = appPerms.length > 0
+                    ? appPerms.includes("manageProducts")
+                    : (appUser.roles || []).some(r => r === 'ADMIN' || r === 'SUPERVISOR');
             }
             this.loadData();
             
