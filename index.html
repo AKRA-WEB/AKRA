@@ -37,6 +37,24 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
+    const CURRENT_VERSION = "20260602.01";
+    async function checkAppVersion() {
+        try {
+            const res = await fetch('version.json?t=' + Date.now());
+            if (!res.ok) return true;
+            const config = await res.json();
+            if (config && config.version && config.version !== CURRENT_VERSION) {
+                alert('พบเวอร์ชันใหม่ กำลังอัปเดตระบบ...');
+                const url = new URL(window.location.href);
+                url.searchParams.set('update', Date.now());
+                window.location.replace(url.toString());
+                return false;
+            }
+        } catch (e) {
+            console.warn('Version check skipped:', e);
+        }
+        return true;
+    }
     // อัปเดต URL สำหรับส่ง Log
     const GOOGLE_APP_SCRIPT_URL_MAIN = "https://script.google.com/macros/s/AKfycbznbgC3VLTU14rw_oPifAM10wETg9Eo1l5N0ezWfNFLeGiRKRhlxIV92dSpqndXS6ua/exec";
 
@@ -615,7 +633,10 @@
                 }
             }
         },
-        mounted() {
+        async mounted() {
+            const isVersionOk = await checkAppVersion();
+            if (!isVersionOk) return;
+
             if (typeof appUser !== 'undefined' && appUser !== null) {
                 const appPerms = (appUser.perms && appUser.perms["app-akra"]) || [];
                 this.isAdmin = appPerms.length > 0
