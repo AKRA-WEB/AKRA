@@ -37,7 +37,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260602.01";
+    const CURRENT_VERSION = "20260604.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -55,8 +55,7 @@
         }
         return true;
     }
-    // อัปเดต URL สำหรับส่ง Log
-    const GOOGLE_APP_SCRIPT_URL_MAIN = "https://script.google.com/macros/s/AKfycbznbgC3VLTU14rw_oPifAM10wETg9Eo1l5N0ezWfNFLeGiRKRhlxIV92dSpqndXS6ua/exec";
+    const MAIN_SSO_API_URL = "https://script.google.com/macros/s/AKfycbyQJLwb5HTexG6gxqTehGWlAxfSXVT--CpWnnp2JTcP4xCcMA1vUjSY_eWqPjUKwzq7/exec";
 
     // 1. ตั้งค่า URL ของหน้า Main Portal (สำหรับเด้งกลับไปหน้า Login)
     const MAIN_PORTAL_URL = "https://akra-web.github.io/Main/"; 
@@ -64,11 +63,35 @@
     // 2. กำหนดว่าแอปพลิเคชันนี้ ต้องการสิทธิ์อะไรบ้างถึงจะเข้าได้
     const ALLOWED_ROLES = ["AKRA", "ADMIN", "SUPERVISOR"];
 
-    let appUser = null; 
-    let currentUser = null; 
+    let appUser = null;
+    let currentUser = null;
+    let sessionToken = null;
 
-    function verifyAccess() {
+    async function verifyAccess() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const ssoToken = urlParams.get('sso');
+        if (ssoToken) {
+            try {
+                const verifyURL = `${MAIN_SSO_API_URL}?action=verifyToken&token=${encodeURIComponent(ssoToken)}&roles=${ALLOWED_ROLES.join(',')}`;
+                const response = await fetch(verifyURL);
+                const result = await response.json();
+                if (!result.valid || !result.user) throw new Error(result.reason || 'invalid_session');
+                appUser = result.user;
+                currentUser = appUser.name;
+                sessionToken = ssoToken;
+                localStorage.setItem('akra_user_data', JSON.stringify(appUser));
+                localStorage.setItem('akra_session_token', sessionToken);
+                return true;
+            } catch (error) {
+                localStorage.removeItem('akra_user_data');
+                localStorage.removeItem('akra_session_token');
+                window.location.replace(MAIN_PORTAL_URL);
+                return false;
+            }
+        }
+
         const savedData = localStorage.getItem('akra_user_data');
+        sessionToken = localStorage.getItem('akra_session_token');
         if (!savedData && window.self !== window.top) {
             appUser = { name: "Tester (โหมดจำลอง)", roles: ["ADMIN"] };
             currentUser = appUser.name;
@@ -80,19 +103,26 @@
         try {
             appUser = JSON.parse(savedData);
             const hasPermission = appUser.roles.some(role => ALLOWED_ROLES.includes(role));
-            const isAdmin = appUser.roles.includes("ADMIN"); 
+            const isAdmin = appUser.roles.includes("ADMIN");
             if (!hasPermission && !isAdmin) { window.location.replace(MAIN_PORTAL_URL); return false; }
             currentUser = appUser.name;
             return true;
         } catch (error) {
-            localStorage.removeItem('akra_user_data'); window.location.replace(MAIN_PORTAL_URL); return false;
+            localStorage.removeItem('akra_user_data');
+            localStorage.removeItem('akra_session_token');
+            window.location.replace(MAIN_PORTAL_URL);
+            return false;
         }
     }
-    if(!verifyAccess()) { throw new Error("Access Denied"); }
 
     window.sendAppLog = function(action, details) {
-        const payload = { user: currentUser, action: action, app: CURRENT_APP_NAME, details: details };
-        fetch(GOOGLE_APP_SCRIPT_URL_MAIN, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(err => console.error(err));
+        if (!sessionToken) return;
+        const payload = { token: sessionToken, action: "log", app: CURRENT_APP_NAME, details: `${action}: ${details}` };
+        fetch(MAIN_SSO_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        }).catch(err => console.error(err));
     }
 </script>
 <!-- ========================================================== -->
@@ -636,6 +666,8 @@
         async mounted() {
             const isVersionOk = await checkAppVersion();
             if (!isVersionOk) return;
+            const hasAccess = await verifyAccess();
+            if (!hasAccess) return;
 
             if (typeof appUser !== 'undefined' && appUser !== null) {
                 const appPerms = (appUser.perms && appUser.perms["app-akra"]) || [];
