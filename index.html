@@ -37,7 +37,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260604.01";
+    const CURRENT_VERSION = "20260606.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -668,6 +668,10 @@
             if (!isVersionOk) return;
             const hasAccess = await verifyAccess();
             if (!hasAccess) return;
+
+            // verifyAccess() resolves after data() snapshot ตั้งค่าเริ่มต้นไว้ → sync ค่าผู้ใช้กลับเข้า reactive state
+            this.loggedInUser = currentUser || 'Guest';
+            this.form.user = currentUser || '';
 
             if (typeof appUser !== 'undefined' && appUser !== null) {
                 const appPerms = (appUser.perms && appUser.perms["app-akra"]) || [];
