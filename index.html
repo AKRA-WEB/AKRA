@@ -37,7 +37,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260606.01";
+    const CURRENT_VERSION = "20260611.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -282,11 +282,19 @@
                 </div>
             </div>
 
-            <!-- แจ้งเตือนสินค้าใกล้หมด (แสดงเมื่อมีของต่ำกว่า 10 ชิ้น) -->
+            <!-- ใบจัดสินค้าค้างรอหยิบ -->
+            <button v-if="pickList.length > 0" @click="activeTab = 'picklist'" class="w-full mb-6 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between shadow-sm hover:bg-amber-100 transition text-left">
+                <span class="flex items-center text-sm font-bold text-amber-800">
+                    <i class="fas fa-clipboard-list text-amber-500 mr-2"></i> ใบจัดสินค้าค้างรอหยิบ
+                </span>
+                <span class="font-bold text-amber-700 bg-white px-2.5 py-0.5 rounded-full border border-amber-200 shadow-sm text-sm">{{ pickList.length }} รายการ</span>
+            </button>
+
+            <!-- แจ้งเตือนสินค้าใกล้หมด (แสดงเมื่อมีของต่ำกว่า 20 ชิ้น) -->
             <div v-if="lowStockItems.length > 0" class="mb-6 bg-red-50 border border-red-100 rounded-xl overflow-hidden shadow-sm">
                 <div class="bg-red-100 px-3 py-2 border-b border-red-200 flex items-center">
                     <i class="fas fa-exclamation-circle text-red-500 mr-2 text-sm"></i>
-                    <span class="text-sm font-bold text-red-700">แจ้งเตือนสินค้าใกล้หมด (ต่ำกว่า 10)</span>
+                    <span class="text-sm font-bold text-red-700">แจ้งเตือนสินค้าใกล้หมด (ต่ำกว่า 20)</span>
                 </div>
                 <ul class="divide-y divide-red-100 max-h-40 overflow-y-auto">
                     <li v-for="item in lowStockItems" :key="item.id" class="px-3 py-2 text-xs flex justify-between items-center hover:bg-red-100/50">
@@ -863,7 +871,8 @@
             },
             async saveAdjustStock() {
                 if (this.adjustModal.newStock === this.adjustModal.oldStock) { this.adjustModal.show = false; return; }
-                if (this.adjustModal.newStock < 0) { this.showAlert('ข้อมูลไม่ถูกต้อง', 'จำนวนสต็อกไม่สามารถติดลบได้'); return; }
+                const n = this.adjustModal.newStock;
+                if (n === '' || n === null || n === undefined || !Number.isInteger(n) || n < 0) { this.showAlert('ข้อมูลไม่ถูกต้อง', 'กรุณาระบุจำนวนสต็อกเป็นจำนวนเต็มที่ไม่ติดลบ'); return; }
                 
                 this.isSubmitting = true;
                 const success = await this.apiCall({
