@@ -177,9 +177,44 @@
     let currentUser = null;
     let sessionToken = null;
 
+    
+    function decodeJwtPayload(token) {
+        try {
+            if (!token || typeof token !== 'string') return null;
+            const parts = token.split('.');
+            if (parts.length !== 3) return null;
+            const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            const json = typeof Buffer !== 'undefined'
+                ? Buffer.from(payloadBase64, 'base64').toString('utf8')
+                : decodeURIComponent(escape(atob(payloadBase64)));
+            const parsed = JSON.parse(json);
+            if (parsed && parsed.exp && parsed.exp * 1000 < Date.now()) return null;
+            return parsed;
+        } catch (e) { return null; }
+    }
+
     async function verifyAccess() {
         const urlParams = new URLSearchParams(window.location.search);
         const ssoToken = urlParams.get('sso');
+        const cachedToken = localStorage.getItem('akra_session_token');
+        const tokenToVerify = ssoToken || cachedToken;
+
+        if (tokenToVerify) {
+            const jwtUser = decodeJwtPayload(tokenToVerify);
+            if (jwtUser) {
+                const roles = jwtUser.roles || [];
+                const hasPermission = roles.includes('ADMIN') || roles.some(role => ALLOWED_ROLES.includes(role));
+                if (hasPermission) {
+                    appUser = { id: jwtUser.id, name: jwtUser.name || jwtUser.id, roles: roles, token: tokenToVerify };
+                    currentUser = appUser.name;
+                    sessionToken = tokenToVerify;
+                    localStorage.setItem('akra_user_data', JSON.stringify(appUser));
+                    localStorage.setItem('akra_session_token', sessionToken);
+                    if (ssoToken) { try { window.history.replaceState({}, document.title, window.location.pathname); } catch(e) {} }
+                    return true;
+                }
+            }
+        }
         if (ssoToken) {
             try {
                 const verifyURL = `${MAIN_SSO_API_URL}?action=verifyToken&token=${encodeURIComponent(ssoToken)}&roles=${ALLOWED_ROLES.join(',')}`;
