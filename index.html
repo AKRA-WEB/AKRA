@@ -38,7 +38,7 @@
 <script src="js/supabase-akra-client.js"></script>
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260819.10";
+    const CURRENT_VERSION = "20260820.02";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -880,6 +880,24 @@
             quickWithdraw(product) { this.activeTab = 'transaction'; setTimeout(() => { this.form.type = 'out'; this.form.productId = product.id; this.searchTransaction = product.name; window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50); },
             
             async loadData(silent = false) {
+                if (typeof window !== 'undefined' && window.AkraSupabaseW5) {
+                    try {
+                        const historyRes = await AkraSupabaseW5.getAdjustmentHistory(50);
+                        if (historyRes && historyRes.status === 'success') {
+                            this.history = historyRes.history.map(h => ({
+                                date: h.adjustment_date,
+                                sku: h.sku,
+                                productName: h.product_name,
+                                deltaQty: h.delta_qty,
+                                balanceAfter: h.balance_after,
+                                reason: h.reason,
+                                operator: h.operator
+                            }));
+                        }
+                    } catch(e) {
+                        console.warn('Supabase W5 history error, fallback to GAS:', e);
+                    }
+                }
                 if (!this.isOnline) return;
                 this.isSilentLoading = silent;
                 const cached = getCache('AKRA_WMS_DATA', AKRA_CACHE_TTL);
@@ -904,6 +922,23 @@
                 }
             },
             async apiCall(payload) {
+                if (typeof window !== 'undefined' && window.AkraSupabaseW5 && payload && payload.action === 'transaction') {
+                    try {
+                        const res = await AkraSupabaseW5.recordStockAdjustment({
+                            sku: payload.productId || '',
+                            productName: payload.productName || '',
+                            deltaQty: payload.type === 'in' ? Math.abs(payload.qty) : -Math.abs(payload.qty),
+                            reason: `W5 Adjustment (${payload.type.toUpperCase()})`,
+                            operator: payload.user || 'Staff'
+                        });
+                        if (res && res.status === 'success') {
+                            fetch(WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), keepalive: true }).catch(()=>{});
+                            return true;
+                        }
+                    } catch(supaErr) {
+                        console.warn('Supabase W5 mutation error, fallback to GAS:', supaErr);
+                    }
+                }
                 if (await AppVersionGuard.blockIfStale(payload && payload.action)) return false;
                 if (!this.isOnline) return true;
                 this.isLoading = true; this.isSilentLoading = false;
