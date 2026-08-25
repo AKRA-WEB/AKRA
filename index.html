@@ -37,7 +37,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260820.03";
+    const CURRENT_VERSION = "20260825.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -165,7 +165,7 @@
         return { start: start, check: check, blockIfStale: blockIfStale, isStale: function () { return stale; }, reloadNow: reload };
     })();
 
-    const MAIN_SSO_API_URL = "https://script.google.com/macros/s/AKfycbyQJLwb5HTexG6gxqTehGWlAxfSXVT--CpWnnp2JTcP4xCcMA1vUjSY_eWqPjUKwzq7/exec";
+    const MAIN_SSO_API_URL = "https://hgxrrskztbpejirrdpbq.supabase.co/functions/v1/auth-api";
 
     // 1. ตั้งค่า URL ของหน้า Main Portal (สำหรับเด้งกลับไปหน้า Login)
     const MAIN_PORTAL_URL = "https://akra-web.github.io/Main/"; 
@@ -282,7 +282,7 @@
     <!-- โชว์เฉพาะตอนกดโหลดแบบตั้งใจ (ไม่โชว์ตอน Auto-refresh) -->
     <div v-if="isLoading && !isSilentLoading" class="fixed inset-0 bg-white bg-opacity-80 z-[80] flex flex-col items-center justify-center">
         <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-3"></i>
-        <p class="text-gray-600 font-semibold text-sm">กำลังซิงค์ข้อมูลกับ Google Sheets...</p>
+        <p class="text-gray-600 font-semibold text-sm">กำลังซิงค์ข้อมูลกับระบบคลังสินค้า...</p>
     </div>
 
     <!-- Header -->
@@ -742,7 +742,7 @@
 
 <script>
     const { createApp } = Vue;
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbznbgC3VLTU14rw_oPifAM10wETg9Eo1l5N0ezWfNFLeGiRKRhlxIV92dSpqndXS6ua/exec";
+    const WEB_APP_URL = "https://hgxrrskztbpejirrdpbq.supabase.co/functions/v1/akra-api";
     const AKRA_CACHE_TTL = 5 * 60 * 1000;
     function getCache(key, ttlMs) { try { const raw = localStorage.getItem(key); if (!raw) return null; const w = JSON.parse(raw); if (Date.now() - (w._ts||0) > ttlMs) { localStorage.removeItem(key); return null; } return w._d; } catch(e) { localStorage.removeItem(key); return null; } }
     function setCache(key, data) { localStorage.setItem(key, JSON.stringify({ _ts: Date.now(), _d: data })); }
@@ -879,24 +879,6 @@
             quickWithdraw(product) { this.activeTab = 'transaction'; setTimeout(() => { this.form.type = 'out'; this.form.productId = product.id; this.searchTransaction = product.name; window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50); },
             
             async loadData(silent = false) {
-                if (typeof window !== 'undefined' && window.AkraSupabaseW5) {
-                    try {
-                        const historyRes = await AkraSupabaseW5.getAdjustmentHistory(50);
-                        if (historyRes && historyRes.status === 'success') {
-                            this.history = historyRes.history.map(h => ({
-                                date: h.adjustment_date,
-                                sku: h.sku,
-                                productName: h.product_name,
-                                deltaQty: h.delta_qty,
-                                balanceAfter: h.balance_after,
-                                reason: h.reason,
-                                operator: h.operator
-                            }));
-                        }
-                    } catch(e) {
-                        console.warn('Supabase W5 history error, fallback to GAS:', e);
-                    }
-                }
                 if (!this.isOnline) return;
                 this.isSilentLoading = silent;
                 const cached = getCache('AKRA_WMS_DATA', AKRA_CACHE_TTL);
@@ -908,9 +890,15 @@
                     this.isLoading = true;
                 }
                 try {
-                    const response = await fetch(WEB_APP_URL + '?action=getData');
+                    const tokenParam = sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : '';
+                    const response = await fetch(`${WEB_APP_URL}?action=getData${tokenParam}`, {
+                        headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}
+                    });
                     const data = await response.json();
-                    if (data.products) { this.products = data.products.sort((a,b) => a.name.localeCompare(b.name, 'th')); setCache('AKRA_WMS_DATA', data); }
+                    if (data.products) {
+                        this.products = data.products.sort((a,b) => a.name.localeCompare(b.name, 'th'));
+                        setCache('AKRA_WMS_DATA', data);
+                    }
                     if (data.history) this.history = data.history;
                     if (data.pickList) this.pickList = data.pickList;
                 } catch (error) {
@@ -921,32 +909,31 @@
                 }
             },
             async apiCall(payload) {
-                if (typeof window !== 'undefined' && window.AkraSupabaseW5 && payload && payload.action === 'transaction') {
-                    try {
-                        const res = await AkraSupabaseW5.recordStockAdjustment({
-                            sku: payload.productId || '',
-                            productName: payload.productName || '',
-                            deltaQty: payload.type === 'in' ? Math.abs(payload.qty) : -Math.abs(payload.qty),
-                            reason: `W5 Adjustment (${payload.type.toUpperCase()})`,
-                            operator: payload.user || 'Staff'
-                        });
-                        if (res && res.status === 'success') {
-                            fetch(WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload), keepalive: true }).catch(()=>{});
-                            return true;
-                        }
-                    } catch(supaErr) {
-                        console.warn('Supabase W5 mutation error, fallback to GAS:', supaErr);
-                    }
-                }
                 if (await AppVersionGuard.blockIfStale(payload && payload.action)) return false;
                 if (!this.isOnline) return true;
                 this.isLoading = true; this.isSilentLoading = false;
                 try {
-                    const response = await fetch(WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
-                    return (await response.json()).success;
+                    const bodyPayload = { ...payload, token: sessionToken };
+                    const response = await fetch(WEB_APP_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
+                        },
+                        body: JSON.stringify(bodyPayload)
+                    });
+                    const resJson = await response.json();
+                    if (!response.ok || resJson.success === false) {
+                        this.showAlert('ข้อผิดพลาด', resJson.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', true);
+                        return false;
+                    }
+                    return true;
                 } catch (error) {
-                    this.showAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', true); return false;
-                } finally { this.isLoading = false; }
+                    this.showAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', true);
+                    return false;
+                } finally {
+                    this.isLoading = false;
+                }
             },
 
             // -------- รายการด่วน --------
