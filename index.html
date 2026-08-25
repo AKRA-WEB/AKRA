@@ -37,7 +37,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260825.01";
+    const CURRENT_VERSION = "20260825.02";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -528,12 +528,42 @@
         <div v-if="isAdmin" v-show="activeTab === 'manage'" class="animate-fade-in">
             <h2 class="text-lg font-bold mb-4 text-gray-800">จัดการรายการสินค้า</h2>
             
-            <div class="bg-white p-4 border rounded-xl shadow-sm mb-5">
-                <h3 class="text-sm font-bold text-gray-700 mb-3"><i class="fas fa-plus-circle text-green-500 mr-1"></i> เพิ่มสินค้าใหม่</h3>
-                <div class="flex gap-2">
-                    <input type="text" v-model="newProductName" class="flex-[2] border-gray-300 border p-2.5 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="ชื่อสินค้าใหม่...">
-                    <input type="text" v-model="newProductUnit" @keyup.enter="addProduct" class="flex-[1] border-gray-300 border p-2.5 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="หน่วย..">
-                    <button @click="addProduct" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition">เพิ่ม</button>
+            <div class="bg-white p-4 border rounded-xl shadow-sm mb-5 relative">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-sm font-bold text-gray-700"><i class="fas fa-plus-circle text-green-500 mr-1"></i> เพิ่มสินค้าใหม่</h3>
+                    <span class="text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium border border-blue-100 flex items-center gap-1">
+                        <i class="fas fa-database"></i> ค้นหาจากฐานข้อมูลกลาง
+                    </span>
+                </div>
+                <div class="relative">
+                    <div class="flex gap-2">
+                        <div class="relative flex-[2]">
+                            <input type="text" v-model="newProductName" @input="onMasterSearchInput" @focus="onMasterSearchInput" class="w-full border-gray-300 border p-2.5 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="พิมพ์ชื่อหรือค้นหาจากฐานข้อมูล...">
+                            <span v-if="isSearchingMaster" class="absolute right-3 top-3 text-blue-500 text-xs"><i class="fas fa-circle-notch fa-spin"></i></span>
+                        </div>
+                        <input type="text" v-model="newProductUnit" @keyup.enter="addProduct" class="flex-[1] border-gray-300 border p-2.5 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="หน่วย..">
+                        <button @click="addProduct" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition shrink-0">เพิ่ม</button>
+                    </div>
+
+                    <!-- Dropdown ผลการค้นหาจากฐานข้อมูลกลาง -->
+                    <div v-if="showMasterDropdown && masterSearchResults.length > 0" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto divide-y">
+                        <div class="p-2 bg-blue-50 text-[11px] font-bold text-blue-800 flex justify-between items-center sticky top-0 border-b">
+                            <span><i class="fas fa-box-open mr-1"></i> พบ {{ masterSearchResults.length }} รายการในฐานข้อมูลกลาง (คลิกเพื่อเลือก)</span>
+                            <button @click="showMasterDropdown = false" class="text-gray-400 hover:text-gray-600 px-1"><i class="fas fa-times"></i></button>
+                        </div>
+                        <div v-for="item in masterSearchResults" :key="item.id" @click="selectMasterProduct(item)" class="p-2.5 hover:bg-blue-50 cursor-pointer flex justify-between items-center transition">
+                            <div class="flex flex-col flex-1 pr-2">
+                                <span class="text-sm font-medium text-gray-800">{{ item.name }}</span>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <span v-if="item.sku" class="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded font-mono">{{ item.sku }}</span>
+                                    <span v-if="item.category" class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded">{{ item.category }}</span>
+                                </div>
+                            </div>
+                            <span class="text-xs bg-green-50 text-green-700 font-semibold px-2 py-1 rounded border border-green-200 shrink-0">
+                                {{ item.unit || 'ชิ้น' }}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -759,6 +789,7 @@
                 form: { type: 'out', productId: '', qty: null, user: currentUser || '' },
                 newProductName: '', newProductUnit: 'ชิ้น', searchDashboard: '', searchTransaction: '', searchManage: '', searchTransactionList: '',
                 showDropdown: false, showModal: false, showToast: false, toastMessage: '',
+                masterSearchResults: [], isSearchingMaster: false, showMasterDropdown: false, masterSearchDebounceTimer: null,
                 isLoading: false, isSilentLoading: false, isSubmitting: false, isOnline: WEB_APP_URL.trim() !== '',
                 
                 messageBox: { show: false, title: '', message: '', isError: false },
@@ -1065,12 +1096,58 @@
                 this.isSubmitting = false;
             },
 
+            onMasterSearchInput() {
+                this.showMasterDropdown = true;
+                if (this.masterSearchDebounceTimer) clearTimeout(this.masterSearchDebounceTimer);
+                const q = this.newProductName.trim();
+                if (q.length < 1) {
+                    this.masterSearchResults = [];
+                    this.showMasterDropdown = false;
+                    return;
+                }
+                this.masterSearchDebounceTimer = setTimeout(() => {
+                    this.fetchMasterProducts(q);
+                }, 200);
+            },
+            async fetchMasterProducts(q) {
+                this.isSearchingMaster = true;
+                try {
+                    const tokenParam = sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : '';
+                    const response = await fetch(`${WEB_APP_URL}?action=searchMasterProducts&q=${encodeURIComponent(q)}${tokenParam}`, {
+                        headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}
+                    });
+                    const data = await response.json();
+                    if (data.success && Array.isArray(data.products)) {
+                        this.masterSearchResults = data.products;
+                        this.showMasterDropdown = this.masterSearchResults.length > 0;
+                    }
+                } catch (e) {
+                    console.warn('Master search error:', e);
+                } finally {
+                    this.isSearchingMaster = false;
+                }
+            },
+            selectMasterProduct(item) {
+                this.newProductName = item.name || '';
+                this.newProductUnit = item.unit || 'ชิ้น';
+                this.showMasterDropdown = false;
+                this.masterSearchResults = [];
+            },
+
             async addProduct() {
                 if(!this.newProductName.trim()) { this.showAlert('ข้อมูลไม่ครบ', 'กรุณาระบุชื่อสินค้า'); return; }
+                this.showMasterDropdown = false;
+                this.masterSearchResults = [];
                 const newId = this.products.length > 0 ? Math.max(...this.products.map(p => p.id)) + 1 : 1;
                 const newProduct = { id: newId, name: this.newProductName.trim(), stock: 0, unit: this.newProductUnit.trim() || 'ชิ้น' };
                 const success = await this.apiCall({ action: 'addProduct', product: newProduct });
-                if (success) { this.products.unshift(newProduct); if (window.sendAppLog) window.sendAppLog('เพิ่มสินค้า', `เพิ่ม ${this.newProductName.trim()} W5`); this.newProductName = ''; this.triggerToast('เพิ่มสินค้าเรียบร้อย'); }
+                if (success) {
+                    this.products.unshift(newProduct);
+                    if (window.sendAppLog) window.sendAppLog('เพิ่มสินค้า', `เพิ่ม ${this.newProductName.trim()} W5`);
+                    this.newProductName = '';
+                    this.newProductUnit = 'ชิ้น';
+                    this.triggerToast('เพิ่มสินค้าเรียบร้อย');
+                }
             },
             openEditModal(product) { this.editModal = { show: true, id: product.id, oldName: product.name, newName: product.name }; },
             async saveEditProduct() {
