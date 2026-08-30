@@ -36,8 +36,8 @@
 
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
-    const CURRENT_APP_NAME = "AKRA W5"; 
-    const CURRENT_VERSION = "20260825.02";
+    var CURRENT_APP_NAME = "AKRA W5"; 
+    var CURRENT_VERSION = "20260830.02";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -60,7 +60,7 @@
        Watches version.json after load (interval/focus/visibility/pageshow). On mismatch it
        shows a non-blocking reload banner; a blocking modal + abort only fires before a
        mutation via blockIfStale(). Reads listed in readActions stay allowed. */
-    const AppVersionGuard = (function () {
+    var AppVersionGuard = (function () {
         var cfg = { current: '', readActions: [] };
         var stale = false, started = false;
         var POLL_MS = 5 * 60 * 1000;
@@ -165,17 +165,13 @@
         return { start: start, check: check, blockIfStale: blockIfStale, isStale: function () { return stale; }, reloadNow: reload };
     })();
 
-    const MAIN_SSO_API_URL = "https://hgxrrskztbpejirrdpbq.supabase.co/functions/v1/auth-api";
+    var MAIN_SSO_API_URL = "https://hgxrrskztbpejirrdpbq.supabase.co/functions/v1/auth-api";
+    var MAIN_PORTAL_URL = "https://akra-web.github.io/Main/"; 
+    var ALLOWED_ROLES = ["AKRA", "ADMIN", "SUPERVISOR"];
 
-    // 1. ตั้งค่า URL ของหน้า Main Portal (สำหรับเด้งกลับไปหน้า Login)
-    const MAIN_PORTAL_URL = "https://akra-web.github.io/Main/"; 
-
-    // 2. กำหนดว่าแอปพลิเคชันนี้ ต้องการสิทธิ์อะไรบ้างถึงจะเข้าได้
-    const ALLOWED_ROLES = ["AKRA", "ADMIN", "SUPERVISOR"];
-
-    let appUser = null;
-    let currentUser = null;
-    let sessionToken = null;
+    var appUser = null;
+    var currentUser = null;
+    var sessionToken = null;
 
     
     function decodeJwtPayload(token) {
@@ -183,81 +179,139 @@
             if (!token || typeof token !== 'string') return null;
             const parts = token.split('.');
             if (parts.length !== 3) return null;
-            const payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-            const json = typeof Buffer !== 'undefined'
-                ? Buffer.from(payloadBase64, 'base64').toString('utf8')
-                : decodeURIComponent(escape(atob(payloadBase64)));
+            let payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            while (payloadBase64.length % 4) {
+                payloadBase64 += '=';
+            }
+            let json;
+            if (typeof TextDecoder !== 'undefined' && typeof atob === 'function') {
+                const binaryStr = atob(payloadBase64);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }
+                json = new TextDecoder('utf-8').decode(bytes);
+            } else if (typeof Buffer !== 'undefined') {
+                json = Buffer.from(payloadBase64, 'base64').toString('utf8');
+            } else if (typeof atob === 'function') {
+                json = decodeURIComponent(atob(payloadBase64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+            } else {
+                return null;
+            }
             const parsed = JSON.parse(json);
-            if (parsed && parsed.exp && parsed.exp * 1000 < Date.now()) return null;
+            const expMs = Number(parsed.exp) < 1000000000000 ? Number(parsed.exp) * 1000 : Number(parsed.exp);
+            if (!Number.isFinite(expMs) || expMs <= Date.now()) return null;
             return parsed;
         } catch (e) { return null; }
     }
 
+    function clearStoredSession() {
+        localStorage.removeItem('akra_user_data');
+        localStorage.removeItem('akra_session_token');
+        appUser = null;
+        currentUser = null;
+        sessionToken = null;
+    }
+
+    function redirectToLogin(message) {
+        clearStoredSession();
+        if (message) alert(message);
+        window.location.replace(MAIN_PORTAL_URL);
+    }
+
     async function verifyAccess() {
+        const isPreviewEnv = window.self !== window.top || window.location.hostname === "" || ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
         const urlParams = new URLSearchParams(window.location.search);
         const ssoToken = urlParams.get('sso');
         const cachedToken = localStorage.getItem('akra_session_token');
-        const tokenToVerify = ssoToken || cachedToken;
 
-        if (tokenToVerify) {
-            const jwtUser = decodeJwtPayload(tokenToVerify);
+        // 1. Instant JWT Verification from SSO Param
+        if (ssoToken) {
+            const jwtUser = decodeJwtPayload(ssoToken);
             if (jwtUser) {
-                const roles = jwtUser.roles || [];
-                const hasPermission = roles.includes('ADMIN') || roles.some(role => ALLOWED_ROLES.includes(role));
+                const roles = (jwtUser.roles || []).map(r => String(r || '').trim().toUpperCase());
+                const perms = (jwtUser.perms && typeof jwtUser.perms === 'object') ? jwtUser.perms : {};
+                const akraPerms = Array.isArray(perms['app-akra']) ? perms['app-akra'] : [];
+                const hasPermission = roles.includes('ADMIN') || roles.some(role => ALLOWED_ROLES.includes(role)) || akraPerms.length > 0;
                 if (hasPermission) {
-                    appUser = { id: jwtUser.id, name: jwtUser.name || jwtUser.id, roles: roles, token: tokenToVerify };
+                    appUser = {
+                        id: jwtUser.id,
+                        name: jwtUser.name || jwtUser.id,
+                        roles: roles,
+                        perms: perms,
+                        token: ssoToken
+                    };
                     currentUser = appUser.name;
-                    sessionToken = tokenToVerify;
+                    sessionToken = ssoToken;
                     localStorage.setItem('akra_user_data', JSON.stringify(appUser));
                     localStorage.setItem('akra_session_token', sessionToken);
-                    if (ssoToken) { try { window.history.replaceState({}, document.title, window.location.pathname); } catch(e) {} }
+                    try { window.history.replaceState({}, document.title, window.location.pathname); } catch(e) {}
                     return true;
+                } else {
+                    redirectToLogin('คุณไม่มีสิทธิ์เข้าใช้งานระบบนี้');
+                    return false;
+                }
+            } else {
+                // If SSO token in URL is present but cannot decode, fallback to server verification
+                try {
+                    const verifyURL = `${MAIN_SSO_API_URL}?action=verifyToken&token=${encodeURIComponent(ssoToken)}&roles=${ALLOWED_ROLES.join(',')}`;
+                    const response = await fetch(verifyURL);
+                    const result = await response.json();
+                    if (!result.valid || !result.user) throw new Error(result.reason || 'invalid_session');
+                    appUser = result.user;
+                    appUser.token = ssoToken;
+                    currentUser = appUser.name;
+                    sessionToken = ssoToken;
+                    localStorage.setItem('akra_user_data', JSON.stringify(appUser));
+                    localStorage.setItem('akra_session_token', sessionToken);
+                    try { window.history.replaceState({}, document.title, window.location.pathname); } catch(e) {}
+                    return true;
+                } catch (error) {
+                    redirectToLogin('เซสชันไม่ถูกต้องหรือหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+                    return false;
                 }
             }
         }
-        if (ssoToken) {
-            try {
-                const verifyURL = `${MAIN_SSO_API_URL}?action=verifyToken&token=${encodeURIComponent(ssoToken)}&roles=${ALLOWED_ROLES.join(',')}`;
-                const response = await fetch(verifyURL);
-                const result = await response.json();
-                if (!result.valid || !result.user) throw new Error(result.reason || 'invalid_session');
-                appUser = result.user;
-                currentUser = appUser.name;
-                sessionToken = ssoToken;
-                localStorage.setItem('akra_user_data', JSON.stringify(appUser));
-                localStorage.setItem('akra_session_token', sessionToken);
-                return true;
-            } catch (error) {
-                localStorage.removeItem('akra_user_data');
-                localStorage.removeItem('akra_session_token');
-                window.location.replace(MAIN_PORTAL_URL);
-                return false;
+
+        // 2. Instant JWT Verification from Cached Token
+        if (cachedToken) {
+            const jwtUser = decodeJwtPayload(cachedToken);
+            if (jwtUser) {
+                const roles = (jwtUser.roles || []).map(r => String(r || '').trim().toUpperCase());
+                const perms = (jwtUser.perms && typeof jwtUser.perms === 'object') ? jwtUser.perms : {};
+                const akraPerms = Array.isArray(perms['app-akra']) ? perms['app-akra'] : [];
+                const hasPermission = roles.includes('ADMIN') || roles.some(role => ALLOWED_ROLES.includes(role)) || akraPerms.length > 0;
+                if (hasPermission) {
+                    appUser = {
+                        id: jwtUser.id,
+                        name: jwtUser.name || jwtUser.id,
+                        roles: roles,
+                        perms: perms,
+                        token: cachedToken
+                    };
+                    currentUser = appUser.name;
+                    sessionToken = cachedToken;
+                    localStorage.setItem('akra_user_data', JSON.stringify(appUser));
+                    return true;
+                }
             }
+            // If cachedToken is expired/invalid, clear session and do not allow zombie access
+            clearStoredSession();
         }
 
-        const savedData = localStorage.getItem('akra_user_data');
-        sessionToken = localStorage.getItem('akra_session_token');
-        if (!savedData && window.self !== window.top) {
-            appUser = { name: "Tester (โหมดจำลอง)", roles: ["ADMIN"] };
+        // 3. Preview/Test environment fallback
+        if (isPreviewEnv) {
+            appUser = { name: "Tester (โหมดจำลอง)", roles: ["ADMIN"], perms: { 'app-akra': ['manageProducts', 'viewW5'] }, token: "" };
             currentUser = appUser.name;
+            sessionToken = "";
             return true;
         }
-        if (!savedData) {
-            window.location.replace(MAIN_PORTAL_URL); return false;
-        }
-        try {
-            appUser = JSON.parse(savedData);
-            const hasPermission = appUser.roles.some(role => ALLOWED_ROLES.includes(role));
-            const isAdmin = appUser.roles.includes("ADMIN");
-            if (!hasPermission && !isAdmin) { window.location.replace(MAIN_PORTAL_URL); return false; }
-            currentUser = appUser.name;
-            return true;
-        } catch (error) {
-            localStorage.removeItem('akra_user_data');
-            localStorage.removeItem('akra_session_token');
-            window.location.replace(MAIN_PORTAL_URL);
-            return false;
-        }
+
+        // 4. No valid session
+        redirectToLogin('กรุณาเข้าสู่ระบบผ่านหน้า Main Portal ก่อนใช้งาน');
+        return false;
     }
 
     window.sendAppLog = function(action, details) {
@@ -955,10 +1009,23 @@
                     });
                     const resJson = await response.json();
                     if (!response.ok || resJson.success === false) {
-                        this.showAlert('ข้อผิดพลาด', resJson.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', true);
+                        const errMsg = resJson.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
+                        if (response.status === 401 || errMsg === 'invalid_or_expired_token' || errMsg === 'no_token') {
+                            clearStoredSession();
+                            this.showAlert('เซสชันหมดอายุ', 'เซสชันการใช้งานของคุณหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่ผ่าน Main Portal', true);
+                            setTimeout(() => {
+                                window.location.replace(MAIN_PORTAL_URL);
+                            }, 2000);
+                            return false;
+                        }
+                        if (response.status === 403 || errMsg === 'admin_permission_required' || errMsg === 'permission_denied') {
+                            this.showAlert('ไม่มีสิทธิ์เข้าถึง', 'คุณไม่มีสิทธิ์ดำเนินการในส่วนนี้', true);
+                            return false;
+                        }
+                        this.showAlert('ข้อผิดพลาด', errMsg, true);
                         return false;
                     }
-                    return true;
+                    return resJson || true;
                 } catch (error) {
                     this.showAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', true);
                     return false;
@@ -974,6 +1041,7 @@
                 if (!this.form.qty || this.form.qty <= 0) { this.showAlert('ข้อมูลไม่ถูกต้อง', 'กรุณาระบุจำนวนชิ้นให้ถูกต้อง'); return; }
                 if (!this.form.user.trim()) { this.showAlert('ข้อมูลไม่ครบ', 'ระบบไม่พบชื่อผู้ทำรายการ'); return; }
                 const product = this.products.find(p => p.id === this.form.productId);
+                if (!product) { this.showAlert('ข้อผิดพลาด', 'ไม่พบสินค้านี้ในระบบ กรุณาเลือกสินค้าใหม่อีกครั้ง'); return; }
                 if (this.form.type === 'out' && product.stock < this.form.qty) {
                     this.showAlert('สต็อกไม่พอ!', `ยอดคงเหลือของ ${product.name} มีเพียง ${product.stock} ${product.unit || 'ชิ้น'} ไม่พอสำหรับการเบิก`); return;
                 }
@@ -983,6 +1051,11 @@
                 if (this.isSubmitting) return;
                 this.isSubmitting = true;
                 const product = this.products.find(p => p.id === this.form.productId);
+                if (!product) {
+                    this.showAlert('ข้อผิดพลาด', 'ไม่พบสินค้านี้ในระบบ กรุณาเลือกสินค้าใหม่อีกครั้ง', true);
+                    this.isSubmitting = false;
+                    return;
+                }
                 const qty = parseInt(this.form.qty);
                 const uiDate = this.getTodayStr();
                 const uiTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -991,6 +1064,7 @@
                 if (success) {
                     if (this.form.type === 'in') product.stock += qty; else product.stock -= qty;
                     this.history.push({ date: uiDate, time: uiTime, type: this.form.type, productName: product.name, qty: qty, user: this.form.user.trim() });
+                    localStorage.removeItem('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog(`ทำรายการ${this.form.type === 'in' ? 'รับเข้า' : 'เบิกออก'} W5`, `${product.name} จำนวน ${qty} ${product.unit || 'ชิ้น'}`);
                     this.form.productId = ''; this.form.qty = null; this.searchTransaction = ''; this.showModal = false;
                     this.triggerToast('บันทึกรายการสำเร็จแล้ว'); this.activeTab = 'dashboard'; window.scrollTo(0, 0);
@@ -1003,6 +1077,7 @@
                 if (!this.form.productId) { this.showAlert('ข้อมูลไม่ครบ', 'กรุณาเลือกสินค้าจากรายการ'); return; }
                 if (!this.form.qty || this.form.qty <= 0) { this.showAlert('ข้อมูลไม่ถูกต้อง', 'กรุณาระบุจำนวนชิ้นให้ถูกต้อง'); return; }
                 const product = this.products.find(p => p.id === this.form.productId);
+                if (!product) { this.showAlert('ข้อผิดพลาด', 'ไม่พบสินค้านี้ในระบบ กรุณาเลือกสินค้าใหม่อีกครั้ง'); return; }
                 if (product.stock < this.form.qty) {
                     this.showConfirmUI('แจ้งเตือน: สต็อกอาจไม่พอ', `สินค้า ${product.name} มีคงเหลือ ${product.stock} ${product.unit || 'ชิ้น'}\nซึ่งน้อยกว่าที่คุณกำลังสั่งเบิก\n\nต้องการเพิ่มลงใบจัดต่อไปหรือไม่?`, 'bg-orange-500 hover:bg-orange-600', 'fas fa-exclamation-circle text-orange-500', this.processAddPickList, product);
                 } else { this.processAddPickList(product); }
@@ -1017,6 +1092,7 @@
                 const success = await this.apiCall({ action: 'addPickList', ...newItem });
                 if(success) {
                     this.pickList.push(newItem);
+                    localStorage.removeItem('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('สร้างใบจัด W5', `รอเบิก ${product.name} จำนวน ${newItem.qty} ${product.unit || 'ชิ้น'}`);
                     this.triggerToast('เพิ่มลงใบจัดเรียบร้อยแล้ว');
                     this.form.productId = ''; this.form.qty = null; this.searchTransaction = ''; this.activeTab = 'picklist';
@@ -1035,6 +1111,7 @@
                     if(product) product.stock -= this.pickModal.actualQty;
                     this.pickList = this.pickList.filter(p => p.pickId !== item.pickId);
                     this.history.push({ date: uiDate, time: uiTime, type: 'out', productName: item.productName, qty: this.pickModal.actualQty, user: this.loggedInUser });
+                    localStorage.removeItem('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('หยิบสินค้าตามใบจัด W5', `เบิก ${item.productName} ออก ${this.pickModal.actualQty} ${product ? product.unit || 'ชิ้น' : 'ชิ้น'}`);
                     this.triggerToast('หยิบสินค้าและตัดสต็อกเรียบร้อย'); this.pickModal.show = false;
                 }
@@ -1043,7 +1120,7 @@
             confirmRemovePickList(item) { this.showConfirmUI('ยืนยันลบใบจัด', `ต้องการลบรายการขอเบิกสินค้านี้ใช่หรือไม่?\n\n"${item.productName}"\nจำนวน ${item.qty} ${this.getProductUnitByName(item.productName)}`, 'bg-red-600 hover:bg-red-700', 'fas fa-trash text-red-500', this.processRemovePickList, item); },
             async processRemovePickList(item) {
                 this.isSubmitting = true; const success = await this.apiCall({ action: 'removePickList', pickId: item.pickId });
-                if(success) { this.pickList = this.pickList.filter(p => p.pickId !== item.pickId); if (window.sendAppLog) window.sendAppLog('ยกเลิกใบจัด W5', `ยกเลิกการรอเบิก ${item.productName}`); this.triggerToast('ลบรายการใบจัดสำเร็จ'); }
+                if(success) { this.pickList = this.pickList.filter(p => p.pickId !== item.pickId); localStorage.removeItem('AKRA_WMS_DATA'); if (window.sendAppLog) window.sendAppLog('ยกเลิกใบจัด W5', `ยกเลิกการรอเบิก ${item.productName}`); this.triggerToast('ลบรายการใบจัดสำเร็จ'); }
                 this.isSubmitting = false;
             },
 
@@ -1057,12 +1134,13 @@
                 if (success) {
                     if (reverseType === 'in') product.stock += log.qty; else product.stock -= log.qty;
                     this.history.push({ type: reverseType, productName: product.name + ' [ยกเลิก]', qty: log.qty, user: this.loggedInUser, date: uiDate, time: uiTime });
+                    localStorage.removeItem('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog(`ยกเลิกรายการ${log.type === 'in' ? 'รับเข้า' : 'เบิกออก'} W5`, `คืนยอด ${product.name} จำนวน ${log.qty} ${product.unit || 'ชิ้น'}`);
                     this.triggerToast('ยกเลิกรายการและคืนยอดสำเร็จ');
                 }
                 this.isSubmitting = false;
             },
-            getSelectedProductName() { return this.form.productId ? this.products.find(p => p.id === this.form.productId).name : ''; },
+            getSelectedProductName() { return this.form.productId ? (this.products.find(p => p.id === this.form.productId) || {}).name || '' : ''; },
             getSelectedProductUnit() { const p = this.products.find(p => p.id === this.form.productId); return p ? (p.unit || 'ชิ้น') : 'ชิ้น'; },
             
             // --- 🌟 ปรับแก้สต็อก (Admin) ---
@@ -1082,6 +1160,7 @@
                 if (success) {
                     const product = this.products.find(p => p.id === this.adjustModal.id);
                     if(product) product.stock = this.adjustModal.newStock;
+                    localStorage.removeItem('AKRA_WMS_DATA');
                     
                     const uiDate = this.getTodayStr();
                     const uiTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -1138,29 +1217,57 @@
                 if(!this.newProductName.trim()) { this.showAlert('ข้อมูลไม่ครบ', 'กรุณาระบุชื่อสินค้า'); return; }
                 this.showMasterDropdown = false;
                 this.masterSearchResults = [];
-                const newId = this.products.length > 0 ? Math.max(...this.products.map(p => p.id)) + 1 : 1;
-                const newProduct = { id: newId, name: this.newProductName.trim(), stock: 0, unit: this.newProductUnit.trim() || 'ชิ้น' };
-                const success = await this.apiCall({ action: 'addProduct', product: newProduct });
-                if (success) {
-                    this.products.unshift(newProduct);
-                    if (window.sendAppLog) window.sendAppLog('เพิ่มสินค้า', `เพิ่ม ${this.newProductName.trim()} W5`);
+                const pName = this.newProductName.trim();
+                const pUnit = this.newProductUnit.trim() || 'ชิ้น';
+                this.isSubmitting = true;
+                const res = await this.apiCall({ action: 'addProduct', product: { name: pName, stock: 0, unit: pUnit } });
+                if (res && res.success) {
+                    const serverProd = res.product || { id: res.productId, name: pName, stock: 0, unit: pUnit };
+                    if (serverProd && serverProd.id) {
+                        const existingIdx = this.products.findIndex(p => p.id === serverProd.id || p.name.toLowerCase() === serverProd.name.toLowerCase());
+                        if (existingIdx !== -1) {
+                            this.products.splice(existingIdx, 1, serverProd);
+                        } else {
+                            this.products.unshift(serverProd);
+                        }
+                    } else {
+                        await this.loadData(true);
+                    }
+                    localStorage.removeItem('AKRA_WMS_DATA');
+                    if (window.sendAppLog) window.sendAppLog('เพิ่มสินค้า', `เพิ่ม ${pName} W5`);
                     this.newProductName = '';
                     this.newProductUnit = 'ชิ้น';
                     this.triggerToast('เพิ่มสินค้าเรียบร้อย');
                 }
+                this.isSubmitting = false;
             },
             openEditModal(product) { this.editModal = { show: true, id: product.id, oldName: product.name, newName: product.name }; },
             async saveEditProduct() {
                 if (!this.editModal.newName.trim()) { this.showAlert('ข้อมูลไม่ครบ', 'ชื่อว่างเปล่า'); return; }
                 if (this.editModal.newName === this.editModal.oldName) { this.editModal.show = false; return; }
-                this.isSubmitting = true; const success = await this.apiCall({ action: 'editProduct', productId: this.editModal.id, newName: this.editModal.newName.trim() });
-                if (success) { const product = this.products.find(p => p.id === this.editModal.id); if (product) product.name = this.editModal.newName.trim(); if (window.sendAppLog) window.sendAppLog('แก้ชื่อสินค้า', `${this.editModal.oldName} เป็น ${this.editModal.newName}`); this.triggerToast('อัปเดตชื่อสำเร็จ'); this.editModal.show = false; }
+                this.isSubmitting = true;
+                const success = await this.apiCall({ action: 'editProduct', productId: this.editModal.id, newName: this.editModal.newName.trim() });
+                if (success) {
+                    const product = this.products.find(p => p.id === this.editModal.id);
+                    if (product) product.name = this.editModal.newName.trim();
+                    localStorage.removeItem('AKRA_WMS_DATA');
+                    if (window.sendAppLog) window.sendAppLog('แก้ชื่อสินค้า', `${this.editModal.oldName} เป็น ${this.editModal.newName}`);
+                    this.triggerToast('อัปเดตชื่อสำเร็จ');
+                    this.editModal.show = false;
+                }
                 this.isSubmitting = false;
             },
             confirmDelete(product) { this.showConfirmUI('ยืนยันลบสินค้า', `ลบ "${product.name}"?`, 'bg-red-600 hover:bg-red-700', 'fas fa-trash-alt text-red-500', this.processDelete, product.id); },
             async processDelete(id) {
-                this.isSubmitting = true; const productToDelete = this.products.find(p => p.id === id); const success = await this.apiCall({ action: 'deleteProduct', productId: id });
-                if (success) { this.products = this.products.filter(p => p.id !== id); if (window.sendAppLog) window.sendAppLog('ลบสินค้า', `ลบ ${productToDelete.name} W5`); this.triggerToast('ลบสำเร็จ'); }
+                this.isSubmitting = true;
+                const productToDelete = this.products.find(p => p.id === id);
+                const success = await this.apiCall({ action: 'deleteProduct', productId: id });
+                if (success) {
+                    this.products = this.products.filter(p => p.id !== id);
+                    localStorage.removeItem('AKRA_WMS_DATA');
+                    if (window.sendAppLog) window.sendAppLog('ลบสินค้า', `ลบ ${productToDelete ? productToDelete.name : id} W5`);
+                    this.triggerToast('ลบสำเร็จ');
+                }
                 this.isSubmitting = false;
             }
         }
