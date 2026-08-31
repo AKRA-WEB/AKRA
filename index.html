@@ -85,7 +85,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260831.01";
+    var CURRENT_VERSION = "20260831.02";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -456,7 +456,8 @@
                         <div class="flex-1 min-w-0">
                             <h3 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2">{{ product.name }}</h3>
                             <div class="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
-                                <span class="text-[9px] sm:text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded-md">
+                                <span :class="getProductCategoryClass(product)" class="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+                                    <i v-if="getProductCategory(product) === 'chilled'" class="fas fa-snowflake text-sky-500 text-[9px]"></i>
                                     {{ getProductCategoryName(product) }}
                                 </span>
                                 <span v-if="product.unit" class="text-[9px] sm:text-[10px] text-slate-400 font-medium">หน่วย: {{ product.unit }}</span>
@@ -1064,11 +1065,11 @@
                 selectedCategory: 'all',
                 categoryList: [
                     { id: 'all', name: 'ทั้งหมด' },
-                    { id: 'packaging', name: 'บรรจุภัณฑ์' },
-                    { id: 'ppe', name: 'อุปกรณ์ PPE' },
-                    { id: 'tape', name: 'เทป & วัสดุรัด' },
-                    { id: 'label', name: 'ป้าย & เอกสาร' },
-                    { id: 'raw', name: 'วัตถุดิบ & อื่นๆ' }
+                    { id: 'chilled', name: 'แช่เย็น' },
+                    { id: 'flour', name: 'แป้ง & ผงฟู' },
+                    { id: 'butter', name: 'เนย & น้ำมัน' },
+                    { id: 'dairy_sugar', name: 'นม & น้ำตาล' },
+                    { id: 'packaging_misc', name: 'บรรจุภัณฑ์ & อื่นๆ' }
                 ],
                 showDropdown: false, showModal: false, showToast: false, toastMessage: '',
                 masterSearchResults: [], isSearchingMaster: false, showMasterDropdown: false, masterSearchDebounceTimer: null,
@@ -1164,23 +1165,97 @@
             getProductCategory(p) {
                 if (p.category) {
                     const c = String(p.category).toLowerCase();
-                    if (c.includes('pack') || c.includes('กล่อง') || c.includes('ถุง') || c.includes('พลาสติก')) return 'packaging';
-                    if (c.includes('ppe') || c.includes('ถุงมือ') || c.includes('หน้ากาก')) return 'ppe';
-                    if (c.includes('tape') || c.includes('เทป') || c.includes('สายรัด')) return 'tape';
-                    if (c.includes('label') || c.includes('ป้าย') || c.includes('สติกเกอร์') || c.includes('เอกสาร')) return 'label';
-                    return c;
+                    if (c === 'chilled' || c.includes('แช่เย็น') || c.includes('แช่แข็ง') || c.includes('cool') || c.includes('frozen')) return 'chilled';
+                    if (c === 'flour' || c.includes('แป้ง') || c.includes('ผงฟู')) return 'flour';
+                    if (c === 'butter' || c.includes('เนย') || c.includes('มาการีน') || c.includes('oil')) return 'butter';
+                    if (c === 'dairy_sugar' || c.includes('นม') || c.includes('น้ำตาล') || c.includes('sugar')) return 'dairy_sugar';
+                    if (c === 'packaging_misc' || c.includes('ถุง') || c.includes('กล่อง') || c.includes('ถ้วย') || c.includes('pack')) return 'packaging_misc';
                 }
                 const name = (p.name || '').toLowerCase();
-                if (name.includes('ถุงมือ') || name.includes('หน้ากาก') || name.includes('หมวก') || name.includes('เอี๊ยม')) return 'ppe';
-                if (name.includes('กล่อง') || name.includes('ถุง') || name.includes('พลาสติกพัน') || name.includes('บับเบิ้ล') || name.includes('กระสอบ')) return 'packaging';
-                if (name.includes('เทป') || name.includes('สายรัด') || name.includes('opp')) return 'tape';
-                if (name.includes('ป้าย') || name.includes('สติกเกอร์') || name.includes('กระดาษ') || name.includes('บิล') || name.includes('ฟอร์ม')) return 'label';
-                return 'raw';
+                // 1. Chilled & Frozen (วิปครีม, วิปปิ้ง, แช่แข็ง, แช่เย็น, ชีส, ครีมเมอร์, ทาร์ต, etc. หรือขึ้นต้นด้วย ^Z/)
+                if (
+                    name.startsWith('^z/') ||
+                    name.includes('แช่แข็ง') ||
+                    name.includes('แช่เย็น') ||
+                    name.includes('วิป') ||
+                    name.includes('ชีส') ||
+                    name.includes('มอสเซเรล่า') ||
+                    name.includes('ครีมเมอร์') ||
+                    name.includes('ทาร์ต') ||
+                    name.includes('พรีมีโอ') ||
+                    name.includes('บลูเบอร์รี่') ||
+                    name.includes('สตรอเบอร์รี่') ||
+                    name.includes('ซันวิป') ||
+                    name.includes('ไชน์โร้ด') ||
+                    name.includes('วีโว่') ||
+                    name.includes('เนยสด')
+                ) {
+                    return 'chilled';
+                }
+                // 2. Flour & Powders (แป้ง, ผงฟู, เบกกิ้งโซดา, คัสตาร์ด, โกโก้, เกล็ดขนมปัง, ข้าวเจ้า)
+                if (
+                    name.includes('แป้ง') ||
+                    name.includes('ผงฟู') ||
+                    name.includes('เบกกิ้งโซดา') ||
+                    name.includes('คัสตาร์ด') ||
+                    name.includes('โกโก้') ||
+                    name.includes('เกล็ดขนมปัง') ||
+                    name.includes('กิเลน') ||
+                    name.includes('ข้าวเจ้า') ||
+                    name.includes('ห่าน') ||
+                    name.includes('ดาวฟ้า') ||
+                    name.includes('ว่าว') ||
+                    name.includes('procorn') ||
+                    name.includes('ปลาไทย') ||
+                    (name.includes('ฉลาม') && name.includes('แป้ง'))
+                ) {
+                    return 'flour';
+                }
+                // 3. Butter & Fats (เนยเทียม, เนยทอด, มาการีน, เซสท์, หยก, ป๊อบ, ฟราย)
+                if (
+                    name.includes('เนยเทียม') ||
+                    name.includes('เนยทอด') ||
+                    name.includes('มาการีน') ||
+                    name.includes('เซสท์') ||
+                    name.includes('หยก') ||
+                    name.includes('ป๊อบ') ||
+                    name.includes('ฟราย')
+                ) {
+                    return 'butter';
+                }
+                // 4. Dairy & Sugar (นมข้น, หัวนมผง, ครีมเทียม, น้ำตาล, ไอซิ่ง, คาราเมล, พาเลซ, ฟอลค่อน, ซันเบิร์ด)
+                if (
+                    name.includes('นม') ||
+                    name.includes('น้ำตาล') ||
+                    name.includes('ครีมเทียม') ||
+                    name.includes('ดรีมมี่') ||
+                    name.includes('ดรีมเมอร์') ||
+                    name.includes('ไอซิ่ง') ||
+                    name.includes('คาราเมล') ||
+                    name.includes('พาเลซ') ||
+                    name.includes('ฟอลค่อน') ||
+                    name.includes('ซันเบิร์ด') ||
+                    name.includes('มิตรผล')
+                ) {
+                    return 'dairy_sugar';
+                }
+                // 5. Packaging & Misc (ถ้วยฟอยล์, ถุง, กล่อง, ซอส, สารกันบูด, เทป, etc.)
+                return 'packaging_misc';
             },
             getProductCategoryName(p) {
                 const cat = this.getProductCategory(p);
                 const match = this.categoryList.find(c => c.id === cat);
-                return match ? match.name : 'ทั่วไป';
+                return match ? match.name : 'สินค้าทั่วไป';
+            },
+            getProductCategoryClass(p) {
+                const cat = this.getProductCategory(p);
+                switch(cat) {
+                    case 'chilled': return 'bg-sky-50 text-sky-700 border border-sky-200';
+                    case 'flour': return 'bg-amber-50 text-amber-700 border border-amber-200';
+                    case 'butter': return 'bg-yellow-50 text-yellow-800 border border-yellow-200';
+                    case 'dairy_sugar': return 'bg-pink-50 text-pink-700 border border-pink-200';
+                    default: return 'bg-slate-100 text-slate-600 border border-slate-200';
+                }
             },
             getTodayStr() {
                 return new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit' });
@@ -1311,20 +1386,22 @@
                 } catch (error) {
                     if (window.isPreviewEnv && this.products.length === 0) {
                         this.products = [
-                            { id: "W5-0147", name: "กล่องกระดาษลูกฟูก 3 ชั้น 45 × 60 ซม.", stock: 128, unit: "ใบ", category: "packaging" },
-                            { id: "W5-0204", name: "ถุงมือยางไนไตร สีฟ้า Size M", stock: 18, unit: "กล่อง", category: "ppe" },
-                            { id: "W5-0088", name: "เทปกาว OPP ใส 48 มม. × 100 หลา", stock: 64, unit: "ม้วน", category: "tape" },
-                            { id: "W5-0310", name: "พลาสติกพันพาเลท 50 ซม. × 300 ม.", stock: 9, unit: "ม้วน", category: "packaging" },
-                            { id: "W5-0042", name: "สายรัดพลาสติก PP 12 มม. สีขาว", stock: 36, unit: "ม้วน", category: "tape" },
-                            { id: "W5-0261", name: "ป้ายระบุสินค้า คลัง W5 ขนาด A6", stock: 0, unit: "แพ็ก", category: "label" }
+                            { id: 1, name: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", stock: 24, unit: "ลัง", category: "chilled" },
+                            { id: 2, name: "^Z/สตรอเบอร์รี่ แช่แข็ง Castella เกรดA (ลัง10x1kg)", stock: 8, unit: "ลัง", category: "chilled" },
+                            { id: 3, name: "^Z/มอสเซเรล่าชีส แบบขูด Valla (ลัง12x1kg)", stock: 15, unit: "ลัง", category: "chilled" },
+                            { id: 4, name: "Y/S)แป้ง ว่าว (กระสอบ 22.5kg)", stock: 45, unit: "กระสอบ", category: "flour" },
+                            { id: 5, name: "Y/ล]เนยเทียม เซสท์ เหลือง ตัก (ลัง15kg)", stock: 30, unit: "ลัง", category: "butter" },
+                            { id: 6, name: "Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)", stock: 60, unit: "ถาด", category: "dairy_sugar" },
+                            { id: 7, name: "Z/น้ำตาลทราย คาราเมล มิตรผลโกลด์ (ลัง20x1kg)", stock: 18, unit: "ลัง", category: "dairy_sugar" },
+                            { id: 8, name: "ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)", stock: 0, unit: "ลัง", category: "packaging_misc" }
                         ];
                         this.history = [
-                            { date: this.getTodayStr(), time: "15:20:00", type: "out", productName: "เทปกาว OPP ใส 48 มม. × 100 หลา", qty: 5, user: "อัครพล" },
-                            { date: this.getTodayStr(), time: "14:15:00", type: "out", productName: "กล่องกระดาษลูกฟูก 3 ชั้น 45 × 60 ซม.", qty: 20, user: "สมชาย" }
+                            { date: this.getTodayStr(), time: "15:20:00", type: "out", productName: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", qty: 2, user: "อัครพล" },
+                            { date: this.getTodayStr(), time: "14:15:00", type: "out", productName: "Y/S)แป้ง ว่าว (กระสอบ 22.5kg)", qty: 5, user: "สมชาย" }
                         ];
                         this.pickList = [
-                            { pickId: "1", productId: "W5-0204", productName: "ถุงมือยางไนไตร สีฟ้า Size M", qty: 4, requestedBy: "กิตติพงษ์", timeStr: this.getTodayStr() + " 10:30" },
-                            { pickId: "2", productId: "W5-0088", productName: "เทปกาว OPP ใส 48 มม. × 100 หลา", qty: 12, requestedBy: "นภัสสร", timeStr: this.getTodayStr() + " 11:15" }
+                            { pickId: "1", productId: 1, productName: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", qty: 4, requestedBy: "กิตติพงษ์", timeStr: this.getTodayStr() + " 10:30" },
+                            { pickId: "2", productId: 6, productName: "Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)", qty: 10, requestedBy: "นภัสสร", timeStr: this.getTodayStr() + " 11:15" }
                         ];
                     } else if (!silent && !cached) {
                         this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);

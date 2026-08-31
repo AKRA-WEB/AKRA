@@ -25,7 +25,7 @@ console.log('\n[2/5] Checking version parity...');
 const versionMatch = indexSource.match(/(?:const|var|let)\s+CURRENT_VERSION\s*=\s*["']([^"']+)["']/);
 assert.ok(versionMatch, 'CURRENT_VERSION constant must be defined');
 assert.strictEqual(versionMatch[1], versionJson.version, 'Version mismatch');
-assert.strictEqual(versionMatch[1], '20260831.01', 'Target version must be 20260831.01');
+assert.strictEqual(versionMatch[1], '20260831.02', 'Target version must be 20260831.02');
 console.log(`  ✓ Version verified: ${versionMatch[1]}`);
 
 // Sandbox setup
@@ -98,14 +98,14 @@ function createSandbox(extraGlobals = {}) {
     },
     document: {
       title: 'AKRA W5',
+      body: { appendChild: () => {}, removeChild: () => {} },
       head: { appendChild: () => {} },
-      body: { appendChild: () => {} },
       getElementById: () => null,
       createElement: () => ({
         setAttribute: () => {},
         appendChild: () => {},
         addEventListener: () => {},
-        querySelector: () => ({ focus: () => {} }),
+        click: () => {},
         focus: () => {}
       }),
       addEventListener: () => {}
@@ -115,7 +115,7 @@ function createSandbox(extraGlobals = {}) {
   };
 
   const context = vm.createContext(sandbox);
-  return { context, sandbox, storage, getVueConfig: () => vueAppConfig };
+  return { context, storage, getVueConfig: () => vueAppConfig };
 }
 
 function makeMockJwt(payload) {
@@ -125,21 +125,25 @@ function makeMockJwt(payload) {
   return `${header}.${body}.${sig}`;
 }
 
+// 3. Test Vue State & UI Filter Logic
+console.log('\n[3/5] Testing Catalog filtering and computed metrics...');
 async function runWorkflowTests() {
-  console.log('\n[3/5] Testing Catalog filtering and computed metrics...');
   const capturedCalls = [];
 
   const sampleProducts = [
-    { id: 101, name: 'กล่องกระดาษลูกฟูก 3 ชั้น 45x60', stock: 120, unit: 'ใบ', category: 'packaging' },
-    { id: 102, name: 'ถุงมือยางไนไตร สีฟ้า Size M', stock: 15, unit: 'กล่อง', category: 'ppe' },
-    { id: 103, name: 'เทปกาว OPP ใส 48 มม.', stock: 50, unit: 'ม้วน', category: 'tape' },
-    { id: 104, name: 'สติกเกอร์ป้ายบ่งชี้สินค้า W5', stock: 0, unit: 'แพ็ก', category: 'label' }
+    { id: 101, name: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", stock: 120, unit: 'ลัง' },
+    { id: 102, name: '^Z/สตรอเบอร์รี่ แช่แข็ง Castella เกรดA (ลัง10x1kg)', stock: 8, unit: 'ลัง' },
+    { id: 103, name: '^Z/มอสเซเรล่าชีส แบบขูด Valla (ลัง12x1kg)', stock: 15, unit: 'ลัง' },
+    { id: 104, name: 'Y/S)แป้ง ว่าว (กระสอบ 22.5kg)', stock: 50, unit: 'กระสอบ' },
+    { id: 105, name: 'Y/ล]เนยเทียม เซสท์ เหลือง ตัก (ลัง15kg)', stock: 30, unit: 'ลัง' },
+    { id: 106, name: 'Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)', stock: 60, unit: 'ถาด' },
+    { id: 107, name: 'ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)', stock: 0, unit: 'ลัง' }
   ];
 
   const { context, storage, getVueConfig } = createSandbox({
     fetch: async (url, options) => {
       if (url.includes('version.json')) {
-        return { ok: true, status: 200, json: async () => ({ version: '20260831.01' }) };
+        return { ok: true, status: 200, json: async () => ({ version: '20260831.02' }) };
       }
       const body = options && options.body ? JSON.parse(options.body) : {};
       capturedCalls.push({ url, options, body });
@@ -159,7 +163,6 @@ async function runWorkflowTests() {
   const vueConfig = getVueConfig();
   assert.ok(vueConfig, 'Vue app config must be initialized');
 
-  // Build instance
   const instance = {
     ...vueConfig.data(),
     products: JSON.parse(JSON.stringify(sampleProducts)),
@@ -173,12 +176,10 @@ async function runWorkflowTests() {
     isAdmin: true
   };
 
-  // Bind methods
   Object.keys(vueConfig.methods).forEach(k => {
     instance[k] = vueConfig.methods[k].bind(instance);
   });
 
-  // Attach computed getters
   Object.keys(vueConfig.computed).forEach(k => {
     Object.defineProperty(instance, k, {
       get: () => vueConfig.computed[k].call(instance)
@@ -186,30 +187,42 @@ async function runWorkflowTests() {
   });
 
   // Test Metrics
-  assert.strictEqual(instance.totalItemsInStock, 185);
-  assert.strictEqual(instance.lowStockItems.length, 2); // 15 and 0
-  assert.strictEqual(instance.filteredCatalogProducts.length, 4);
+  assert.strictEqual(instance.totalItemsInStock, 283);
+  assert.strictEqual(instance.lowStockItems.length, 3); // 8, 15, 0 (< 20)
+  assert.strictEqual(instance.filteredCatalogProducts.length, 7);
 
-  // Test Category Filter
-  instance.selectedCategory = 'ppe';
-  assert.strictEqual(instance.filteredCatalogProducts.length, 1);
-  assert.strictEqual(instance.filteredCatalogProducts[0].name, 'ถุงมือยางไนไตร สีฟ้า Size M');
+  // Test Category Classifier: Whipped cream & Frozen products -> 'chilled'
+  assert.strictEqual(instance.getProductCategory(sampleProducts[0]), 'chilled');
+  assert.strictEqual(instance.getProductCategoryName(sampleProducts[0]), 'แช่เย็น');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[1]), 'chilled');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[2]), 'chilled');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[3]), 'flour');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[4]), 'butter');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[5]), 'dairy_sugar');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[6]), 'packaging_misc');
 
-  instance.selectedCategory = 'packaging';
+  // Test Category Filter for 'chilled'
+  instance.selectedCategory = 'chilled';
+  assert.strictEqual(instance.filteredCatalogProducts.length, 3);
+
+  // Test Category Filter for 'flour'
+  instance.selectedCategory = 'flour';
   assert.strictEqual(instance.filteredCatalogProducts.length, 1);
+  assert.strictEqual(instance.filteredCatalogProducts[0].name, 'Y/S)แป้ง ว่าว (กระสอบ 22.5kg)');
 
   instance.selectedCategory = 'all';
-  instance.searchTransactionList = 'OPP';
+  instance.searchTransactionList = 'วิปปิ้ง';
   assert.strictEqual(instance.filteredCatalogProducts.length, 1);
-  assert.strictEqual(instance.filteredCatalogProducts[0].name, 'เทปกาว OPP ใส 48 มม.');
+  assert.strictEqual(instance.filteredCatalogProducts[0].name, "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)");
 
   instance.searchTransactionList = '';
-  console.log('  ✓ Catalog category filter, search, and KPI calculations pass');
+  console.log('  ✓ Catalog category filter (แช่เย็น / แป้ง / เนย / นม / บรรจุภัณฑ์), search, and KPI calculations pass');
 
   // 4. Test 1-Tap Quick Stepper Withdrawal
   console.log('\n[4/5] Testing 1-Tap Quick Stepper Withdrawal flow...');
-  const targetProduct = instance.products.find(p => p.id === 103); // stock 50
+  const targetProduct = instance.products.find(p => p.id === 104);
   instance.openWithdrawStepper(targetProduct);
+
   assert.strictEqual(instance.stepperModal.show, true);
   assert.strictEqual(instance.stepperModal.qty, 1);
   assert.strictEqual(instance.stepperRemainingStock, 49);
@@ -231,7 +244,7 @@ async function runWorkflowTests() {
   assert.strictEqual(instance.history[0].type, 'out');
   assert.strictEqual(instance.history[0].qty, 6);
 
-  const txCall = capturedCalls.find(c => c.body.action === 'transaction' && c.body.productId === 103);
+  const txCall = capturedCalls.find(c => c.body.action === 'transaction' && c.body.productId === 104);
   assert.ok(txCall, 'Transaction mutation must be dispatched to Supabase akra-api');
   assert.strictEqual(txCall.body.type, 'out');
   assert.strictEqual(txCall.body.qty, 6);
