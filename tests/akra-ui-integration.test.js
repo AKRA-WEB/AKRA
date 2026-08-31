@@ -25,7 +25,7 @@ console.log('\n[2/5] Checking version parity...');
 const versionMatch = indexSource.match(/(?:const|var|let)\s+CURRENT_VERSION\s*=\s*["']([^"']+)["']/);
 assert.ok(versionMatch, 'CURRENT_VERSION constant must be defined');
 assert.strictEqual(versionMatch[1], versionJson.version, 'Version mismatch');
-assert.strictEqual(versionMatch[1], '20260831.02', 'Target version must be 20260831.02');
+assert.strictEqual(versionMatch[1], '20260831.03', 'Target version must be 20260831.03');
 console.log(`  ✓ Version verified: ${versionMatch[1]}`);
 
 // Sandbox setup
@@ -121,7 +121,7 @@ function createSandbox(extraGlobals = {}) {
 function makeMockJwt(payload) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sig = Buffer.from('mock-sig').toString('base64url');
+  const sig = 'mock_signature';
   return `${header}.${body}.${sig}`;
 }
 
@@ -135,15 +135,18 @@ async function runWorkflowTests() {
     { id: 102, name: '^Z/สตรอเบอร์รี่ แช่แข็ง Castella เกรดA (ลัง10x1kg)', stock: 8, unit: 'ลัง' },
     { id: 103, name: '^Z/มอสเซเรล่าชีส แบบขูด Valla (ลัง12x1kg)', stock: 15, unit: 'ลัง' },
     { id: 104, name: 'Y/S)แป้ง ว่าว (กระสอบ 22.5kg)', stock: 50, unit: 'กระสอบ' },
-    { id: 105, name: 'Y/ล]เนยเทียม เซสท์ เหลือง ตัก (ลัง15kg)', stock: 30, unit: 'ลัง' },
-    { id: 106, name: 'Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)', stock: 60, unit: 'ถาด' },
-    { id: 107, name: 'ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)', stock: 0, unit: 'ลัง' }
+    { id: 105, name: 'ซอสพริก โรซ่า (ลัง12x1kg)', stock: 20, unit: 'ลัง' },
+    { id: 106, name: 'มายองเนส เบเกอรี่คลาสสิค (ลัง10x1kg)', stock: 12, unit: 'ลัง' },
+    { id: 107, name: 'Y/สารกันบูด แบบผงละเอียด (กระสอบ25kg)', stock: 10, unit: 'กระสอบ' },
+    { id: 108, name: 'Y/ล]เนยเทียม เซสท์ เหลือง ตัก (ลัง15kg)', stock: 30, unit: 'ลัง' },
+    { id: 109, name: 'Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)', stock: 60, unit: 'ถาด' },
+    { id: 110, name: 'ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)', stock: 0, unit: 'ลัง' }
   ];
 
   const { context, storage, getVueConfig } = createSandbox({
     fetch: async (url, options) => {
       if (url.includes('version.json')) {
-        return { ok: true, status: 200, json: async () => ({ version: '20260831.02' }) };
+        return { ok: true, status: 200, json: async () => ({ version: '20260831.03' }) };
       }
       const body = options && options.body ? JSON.parse(options.body) : {};
       capturedCalls.push({ url, options, body });
@@ -187,36 +190,60 @@ async function runWorkflowTests() {
   });
 
   // Test Metrics
-  assert.strictEqual(instance.totalItemsInStock, 283);
-  assert.strictEqual(instance.lowStockItems.length, 3); // 8, 15, 0 (< 20)
-  assert.strictEqual(instance.filteredCatalogProducts.length, 7);
+  assert.strictEqual(instance.totalItemsInStock, 325);
+  assert.strictEqual(instance.lowStockItems.length, 5); // 8, 15, 12, 10, 0 (< 20)
+  assert.strictEqual(instance.filteredCatalogProducts.length, 10);
 
-  // Test Category Classifier: Whipped cream & Frozen products -> 'chilled'
+  // Test Category Classifier:
+  // 1. Chilled -> 'chilled'
   assert.strictEqual(instance.getProductCategory(sampleProducts[0]), 'chilled');
   assert.strictEqual(instance.getProductCategoryName(sampleProducts[0]), 'แช่เย็น');
   assert.strictEqual(instance.getProductCategory(sampleProducts[1]), 'chilled');
   assert.strictEqual(instance.getProductCategory(sampleProducts[2]), 'chilled');
-  assert.strictEqual(instance.getProductCategory(sampleProducts[3]), 'flour');
-  assert.strictEqual(instance.getProductCategory(sampleProducts[4]), 'butter');
-  assert.strictEqual(instance.getProductCategory(sampleProducts[5]), 'dairy_sugar');
-  assert.strictEqual(instance.getProductCategory(sampleProducts[6]), 'packaging_misc');
+
+  // 2. Flour, Sauces, Mayo, Preservatives -> 'flour_raw' (แป้ง & วัตถุดิบ)
+  assert.strictEqual(instance.getProductCategory(sampleProducts[3]), 'flour_raw');
+  assert.strictEqual(instance.getProductCategoryName(sampleProducts[3]), 'แป้ง & วัตถุดิบ');
+  assert.strictEqual(instance.getProductCategory(sampleProducts[4]), 'flour_raw'); // ซอสพริก
+  assert.strictEqual(instance.getProductCategory(sampleProducts[5]), 'flour_raw'); // มายองเนส
+  assert.strictEqual(instance.getProductCategory(sampleProducts[6]), 'flour_raw'); // สารกันบูด
+
+  // 3. Butter -> 'butter'
+  assert.strictEqual(instance.getProductCategory(sampleProducts[7]), 'butter');
+
+  // 4. Dairy & Sugar -> 'dairy_sugar'
+  assert.strictEqual(instance.getProductCategory(sampleProducts[8]), 'dairy_sugar');
+
+  // 5. Packaging -> 'packaging'
+  assert.strictEqual(instance.getProductCategory(sampleProducts[9]), 'packaging');
+  assert.strictEqual(instance.getProductCategoryName(sampleProducts[9]), 'บรรจุภัณฑ์');
 
   // Test Category Filter for 'chilled'
   instance.selectedCategory = 'chilled';
   assert.strictEqual(instance.filteredCatalogProducts.length, 3);
 
-  // Test Category Filter for 'flour'
-  instance.selectedCategory = 'flour';
+  // Test Category Filter for 'flour_raw' (contains flour, sauces, mayo, preservatives)
+  instance.selectedCategory = 'flour_raw';
+  assert.strictEqual(instance.filteredCatalogProducts.length, 4);
+
+  // Test Category Filter for 'packaging' (strictly pure packaging)
+  instance.selectedCategory = 'packaging';
   assert.strictEqual(instance.filteredCatalogProducts.length, 1);
-  assert.strictEqual(instance.filteredCatalogProducts[0].name, 'Y/S)แป้ง ว่าว (กระสอบ 22.5kg)');
+  assert.strictEqual(instance.filteredCatalogProducts[0].name, 'ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)');
+
+  // Test Custom Tag Configuration & Override:
+  instance.setProductCustomTag(105, 'chilled'); // Override ซอสพริก to chilled
+  assert.strictEqual(instance.getProductCategory(instance.products.find(p => p.id === 105)), 'chilled');
+  instance.setProductCustomTag(105, 'auto'); // Reset to auto
+  assert.strictEqual(instance.getProductCategory(instance.products.find(p => p.id === 105)), 'flour_raw');
 
   instance.selectedCategory = 'all';
-  instance.searchTransactionList = 'วิปปิ้ง';
+  instance.searchTransactionList = 'มายองเนส';
   assert.strictEqual(instance.filteredCatalogProducts.length, 1);
-  assert.strictEqual(instance.filteredCatalogProducts[0].name, "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)");
+  assert.strictEqual(instance.filteredCatalogProducts[0].name, 'มายองเนส เบเกอรี่คลาสสิค (ลัง10x1kg)');
 
   instance.searchTransactionList = '';
-  console.log('  ✓ Catalog category filter (แช่เย็น / แป้ง / เนย / นม / บรรจุภัณฑ์), search, and KPI calculations pass');
+  console.log('  ✓ Catalog category filter (แช่เย็น / แป้ง & วัตถุดิบ / เนย / นม / บรรจุภัณฑ์) & Custom Tag Configuration pass');
 
   // 4. Test 1-Tap Quick Stepper Withdrawal
   console.log('\n[4/5] Testing 1-Tap Quick Stepper Withdrawal flow...');

@@ -85,7 +85,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260831.02";
+    var CURRENT_VERSION = "20260831.03";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -766,7 +766,14 @@
                     <li v-for="product in filteredManageProducts" :key="product.id" class="p-3 flex justify-between items-center text-xs hover:bg-slate-50 transition">
                         <div class="flex-1 pr-2 min-w-0">
                             <p class="font-bold text-slate-800 leading-tight truncate">{{ product.name }}</p>
-                            <span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1 inline-block border border-slate-200">คงเหลือ: {{ product.stock }} {{ product.unit }}</span>
+                            <div class="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span :class="getProductCategoryClass(product)" class="text-[9px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition" @click="openEditModal(product)" title="คลิกเพื่อแก้ไขแท็ก">
+                                    <i v-if="getProductCategory(product) === 'chilled'" class="fas fa-snowflake text-sky-500 text-[8px]"></i>
+                                    {{ getProductCategoryName(product) }}
+                                    <i class="fas fa-pen text-[7px] opacity-50 ml-0.5"></i>
+                                </span>
+                                <span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">คงเหลือ: {{ product.stock }} {{ product.unit }}</span>
+                            </div>
                         </div>
                         <div class="flex gap-1 shrink-0">
                             <button @click="openAdjustModal(product)" class="text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 p-2 rounded-lg transition border border-purple-100" title="ปรับสต็อก">
@@ -935,23 +942,34 @@
         </div>
     </transition>
 
-    <!-- Edit Name Modal -->
+    <!-- Edit Product & Tag Modal -->
     <transition name="fade">
         <div v-if="editModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
-            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-4">
+            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3.5">
                 <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
-                    <i class="fas fa-edit text-[#171c8f] text-lg"></i>
-                    <h3 class="text-sm font-extrabold text-slate-900">แก้ไขชื่อสินค้า</h3>
+                    <i class="fas fa-tags text-[#171c8f] text-lg"></i>
+                    <h3 class="text-sm font-extrabold text-slate-900">แก้ไขข้อมูล & แท็กสินค้า</h3>
                 </div>
                 <div>
                     <span class="text-[11px] font-semibold text-slate-500">ชื่อเดิม</span>
                     <p class="text-xs text-slate-700 bg-slate-100 p-2 rounded-lg border border-slate-200 mt-0.5 line-clamp-2">{{ editModal.oldName }}</p>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อใหม่ <span class="text-rose-500">*</span></label>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อสินค้า <span class="text-rose-500">*</span></label>
                     <input type="text" v-model="editModal.newName" @keyup.enter="saveEditProduct" class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-xs outline-none font-medium">
                 </div>
-                <div class="flex gap-2">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">หมวดหมู่ / แท็กสินค้า</label>
+                    <select v-model="editModal.newCategory" class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-xs outline-none font-medium text-slate-800">
+                        <option value="auto">⚡ อัตโนมัติ (ตามชื่อสินค้า)</option>
+                        <option value="chilled">❄️ แช่เย็น (วิปครีม, ชีส, แช่แข็ง)</option>
+                        <option value="flour_raw">🌾 แป้ง & วัตถุดิบ (ซอส, มายองเนส, ผง)</option>
+                        <option value="butter">🧈 เนย & น้ำมัน (เนยเทียม, น้ำมัน)</option>
+                        <option value="dairy_sugar">🥛 นม & น้ำตาล (นมข้น, ไอซิ่ง)</option>
+                        <option value="packaging">📦 บรรจุภัณฑ์ (ถ้วยฟอยล์, ถุง, กล่อง)</option>
+                    </select>
+                </div>
+                <div class="flex gap-2 pt-1">
                     <button @click="editModal.show = false" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">ยกเลิก</button>
                     <button @click="saveEditProduct" :disabled="isSubmitting" class="flex-1 bg-[#171c8f] hover:bg-[#101466] text-white font-extrabold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5 shadow-md">
                         <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
@@ -1066,18 +1084,19 @@
                 categoryList: [
                     { id: 'all', name: 'ทั้งหมด' },
                     { id: 'chilled', name: 'แช่เย็น' },
-                    { id: 'flour', name: 'แป้ง & ผงฟู' },
+                    { id: 'flour_raw', name: 'แป้ง & วัตถุดิบ' },
                     { id: 'butter', name: 'เนย & น้ำมัน' },
                     { id: 'dairy_sugar', name: 'นม & น้ำตาล' },
-                    { id: 'packaging_misc', name: 'บรรจุภัณฑ์ & อื่นๆ' }
+                    { id: 'packaging', name: 'บรรจุภัณฑ์' }
                 ],
+                customTags: {},
                 showDropdown: false, showModal: false, showToast: false, toastMessage: '',
                 masterSearchResults: [], isSearchingMaster: false, showMasterDropdown: false, masterSearchDebounceTimer: null,
                 isLoading: false, isSilentLoading: false, isSubmitting: false, isOnline: WEB_APP_URL.trim() !== '',
                 
                 messageBox: { show: false, title: '', message: '', isError: false },
                 confirmDialog: { show: false, title: '', message: '', iconClass: '', btnClass: '', action: null, payload: null },
-                editModal: { show: false, id: null, oldName: '', newName: '' },
+                editModal: { show: false, id: null, oldName: '', newName: '', oldCategory: 'auto', newCategory: 'auto' },
                 pickModal: { show: false, item: null, actualQty: 0 },
                 adjustModal: { show: false, id: null, name: '', oldStock: 0, newStock: 0, unit: '' },
                 
@@ -1150,6 +1169,7 @@
                     ? appPerms.includes("manageProducts")
                     : (appUser.roles || []).some(r => r === 'ADMIN' || r === 'SUPERVISOR');
             }
+            this.loadCustomTags();
             this.loadData();
             
             this.refreshInterval = setInterval(() => {
@@ -1162,14 +1182,34 @@
             if(this.refreshInterval) clearInterval(this.refreshInterval);
         },
         methods: {
+            loadCustomTags() {
+                try {
+                    const raw = localStorage.getItem('AKRA_PRODUCT_CUSTOM_TAGS');
+                    if (raw) this.customTags = JSON.parse(raw) || {};
+                } catch (e) { this.customTags = {}; }
+            },
+            setProductCustomTag(productId, tag) {
+                if (!this.customTags) this.customTags = {};
+                if (!tag || tag === 'auto') {
+                    delete this.customTags[productId];
+                } else {
+                    this.customTags[productId] = tag;
+                }
+                localStorage.setItem('AKRA_PRODUCT_CUSTOM_TAGS', JSON.stringify(this.customTags));
+                const prod = this.products.find(p => p.id === productId);
+                if (prod) prod.category = (tag && tag !== 'auto') ? tag : '';
+            },
             getProductCategory(p) {
+                if (this.customTags && this.customTags[p.id] && this.customTags[p.id] !== 'auto') {
+                    return this.customTags[p.id];
+                }
                 if (p.category) {
                     const c = String(p.category).toLowerCase();
                     if (c === 'chilled' || c.includes('แช่เย็น') || c.includes('แช่แข็ง') || c.includes('cool') || c.includes('frozen')) return 'chilled';
-                    if (c === 'flour' || c.includes('แป้ง') || c.includes('ผงฟู')) return 'flour';
+                    if (c === 'flour_raw' || c === 'flour' || c.includes('แป้ง') || c.includes('วัตถุดิบ') || c.includes('ซอส') || c.includes('มายองเนส')) return 'flour_raw';
                     if (c === 'butter' || c.includes('เนย') || c.includes('มาการีน') || c.includes('oil')) return 'butter';
                     if (c === 'dairy_sugar' || c.includes('นม') || c.includes('น้ำตาล') || c.includes('sugar')) return 'dairy_sugar';
-                    if (c === 'packaging_misc' || c.includes('ถุง') || c.includes('กล่อง') || c.includes('ถ้วย') || c.includes('pack')) return 'packaging_misc';
+                    if (c === 'packaging' || c.includes('บรรจุ') || c.includes('ถุง') || c.includes('กล่อง') || c.includes('ถ้วย') || c.includes('pack')) return 'packaging';
                 }
                 const name = (p.name || '').toLowerCase();
                 // 1. Chilled & Frozen (วิปครีม, วิปปิ้ง, แช่แข็ง, แช่เย็น, ชีส, ครีมเมอร์, ทาร์ต, etc. หรือขึ้นต้นด้วย ^Z/)
@@ -1192,24 +1232,21 @@
                 ) {
                     return 'chilled';
                 }
-                // 2. Flour & Powders (แป้ง, ผงฟู, เบกกิ้งโซดา, คัสตาร์ด, โกโก้, เกล็ดขนมปัง, ข้าวเจ้า)
+                // 2. Pure Packaging (ถ้วยฟอยล์, ถุง, กล่อง, เทป, สายรัด, ฟิล์ม, พลาสติกพัน, บับเบิ้ล, ป้าย, สติกเกอร์, ลังเปล่า)
                 if (
-                    name.includes('แป้ง') ||
-                    name.includes('ผงฟู') ||
-                    name.includes('เบกกิ้งโซดา') ||
-                    name.includes('คัสตาร์ด') ||
-                    name.includes('โกโก้') ||
-                    name.includes('เกล็ดขนมปัง') ||
-                    name.includes('กิเลน') ||
-                    name.includes('ข้าวเจ้า') ||
-                    name.includes('ห่าน') ||
-                    name.includes('ดาวฟ้า') ||
-                    name.includes('ว่าว') ||
-                    name.includes('procorn') ||
-                    name.includes('ปลาไทย') ||
-                    (name.includes('ฉลาม') && name.includes('แป้ง'))
+                    name.includes('ถ้วยฟอยล์') ||
+                    (name.includes('ถ้วย') && !name.includes('ทาร์ต')) ||
+                    (name.includes('ถุง') && !name.includes('แป้ง')) ||
+                    (name.includes('กล่อง') && !name.includes('ครีม')) ||
+                    name.includes('เทป') ||
+                    name.includes('สายรัด') ||
+                    name.includes('พลาสติกพัน') ||
+                    name.includes('ฟิล์ม') ||
+                    name.includes('บับเบิ้ล') ||
+                    name.includes('ป้าย') ||
+                    name.includes('สติกเกอร์')
                 ) {
-                    return 'flour';
+                    return 'packaging';
                 }
                 // 3. Butter & Fats (เนยเทียม, เนยทอด, มาการีน, เซสท์, หยก, ป๊อบ, ฟราย)
                 if (
@@ -1239,8 +1276,8 @@
                 ) {
                     return 'dairy_sugar';
                 }
-                // 5. Packaging & Misc (ถ้วยฟอยล์, ถุง, กล่อง, ซอส, สารกันบูด, เทป, etc.)
-                return 'packaging_misc';
+                // 5. Flour & Ingredients (Default for all other raw materials: แป้ง, ผงฟู, มายองเนส, ซอส, สารกันบูด, ยีสต์, etc.)
+                return 'flour_raw';
             },
             getProductCategoryName(p) {
                 const cat = this.getProductCategory(p);
@@ -1251,9 +1288,10 @@
                 const cat = this.getProductCategory(p);
                 switch(cat) {
                     case 'chilled': return 'bg-sky-50 text-sky-700 border border-sky-200';
-                    case 'flour': return 'bg-amber-50 text-amber-700 border border-amber-200';
+                    case 'flour_raw': return 'bg-amber-50 text-amber-700 border border-amber-200';
                     case 'butter': return 'bg-yellow-50 text-yellow-800 border border-yellow-200';
                     case 'dairy_sugar': return 'bg-pink-50 text-pink-700 border border-pink-200';
+                    case 'packaging': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
                     default: return 'bg-slate-100 text-slate-600 border border-slate-200';
                 }
             },
@@ -1389,11 +1427,12 @@
                             { id: 1, name: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", stock: 24, unit: "ลัง", category: "chilled" },
                             { id: 2, name: "^Z/สตรอเบอร์รี่ แช่แข็ง Castella เกรดA (ลัง10x1kg)", stock: 8, unit: "ลัง", category: "chilled" },
                             { id: 3, name: "^Z/มอสเซเรล่าชีส แบบขูด Valla (ลัง12x1kg)", stock: 15, unit: "ลัง", category: "chilled" },
-                            { id: 4, name: "Y/S)แป้ง ว่าว (กระสอบ 22.5kg)", stock: 45, unit: "กระสอบ", category: "flour" },
-                            { id: 5, name: "Y/ล]เนยเทียม เซสท์ เหลือง ตัก (ลัง15kg)", stock: 30, unit: "ลัง", category: "butter" },
-                            { id: 6, name: "Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)", stock: 60, unit: "ถาด", category: "dairy_sugar" },
-                            { id: 7, name: "Z/น้ำตาลทราย คาราเมล มิตรผลโกลด์ (ลัง20x1kg)", stock: 18, unit: "ลัง", category: "dairy_sugar" },
-                            { id: 8, name: "ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)", stock: 0, unit: "ลัง", category: "packaging_misc" }
+                            { id: 4, name: "Y/S)แป้ง ว่าว (กระสอบ 22.5kg)", stock: 45, unit: "กระสอบ", category: "flour_raw" },
+                            { id: 5, name: "ซอสพริก โรซ่า (ลัง12x1kg)", stock: 20, unit: "ลัง", category: "flour_raw" },
+                            { id: 6, name: "มายองเนส เบเกอรี่คลาสสิค (ลัง10x1kg)", stock: 12, unit: "ลัง", category: "flour_raw" },
+                            { id: 7, name: "Y/ล]เนยเทียม เซสท์ เหลือง ตัก (ลัง15kg)", stock: 30, unit: "ลัง", category: "butter" },
+                            { id: 8, name: "Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)", stock: 60, unit: "ถาด", category: "dairy_sugar" },
+                            { id: 9, name: "ถ้วยฟอยล์ พร้อมอบ Star *แยกฝา* (ลัง12x50pcs)", stock: 0, unit: "ลัง", category: "packaging" }
                         ];
                         this.history = [
                             { date: this.getTodayStr(), time: "15:20:00", type: "out", productName: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", qty: 2, user: "อัครพล" },
@@ -1401,7 +1440,7 @@
                         ];
                         this.pickList = [
                             { pickId: "1", productId: 1, productName: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", qty: 4, requestedBy: "กิตติพงษ์", timeStr: this.getTodayStr() + " 10:30" },
-                            { pickId: "2", productId: 6, productName: "Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)", qty: 10, requestedBy: "นภัสสร", timeStr: this.getTodayStr() + " 11:15" }
+                            { pickId: "2", productId: 8, productName: "Z/นมข้นจืด พาเลซ แดง (ถาด48กป.)", qty: 10, requestedBy: "นภัสสร", timeStr: this.getTodayStr() + " 11:15" }
                         ];
                     } else if (!silent && !cached) {
                         this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
@@ -1661,18 +1700,46 @@
                 }
                 this.isSubmitting = false;
             },
-            openEditModal(product) { this.editModal = { show: true, id: product.id, oldName: product.name, newName: product.name }; },
+            openEditModal(product) {
+                const currentTag = (this.customTags && this.customTags[product.id]) || product.category || 'auto';
+                this.editModal = {
+                    show: true,
+                    id: product.id,
+                    oldName: product.name,
+                    newName: product.name,
+                    oldCategory: currentTag,
+                    newCategory: currentTag
+                };
+            },
             async saveEditProduct() {
-                if (!this.editModal.newName.trim()) { this.showAlert('ข้อมูลไม่ครบ', 'ชื่อว่างเปล่า'); return; }
-                if (this.editModal.newName === this.editModal.oldName) { this.editModal.show = false; return; }
+                const nameChanged = this.editModal.newName.trim() !== this.editModal.oldName;
+                const catChanged = this.editModal.newCategory !== this.editModal.oldCategory;
+
+                if (!this.editModal.newName.trim()) { this.showAlert('ข้อมูลไม่ครบ', 'ชื่อสินค้าต้องไม่ว่างเปล่า'); return; }
+                if (!nameChanged && !catChanged) { this.editModal.show = false; return; }
+
                 this.isSubmitting = true;
-                const success = await this.apiCall({ action: 'editProduct', productId: this.editModal.id, newName: this.editModal.newName.trim() });
+                let success = true;
+
+                if (nameChanged) {
+                    success = await this.apiCall({
+                        action: 'editProduct',
+                        productId: this.editModal.id,
+                        newName: this.editModal.newName.trim()
+                    });
+                }
+
                 if (success) {
                     const product = this.products.find(p => p.id === this.editModal.id);
-                    if (product) product.name = this.editModal.newName.trim();
+                    if (product) {
+                        if (nameChanged) product.name = this.editModal.newName.trim();
+                        if (catChanged) {
+                            this.setProductCustomTag(product.id, this.editModal.newCategory);
+                        }
+                    }
                     localStorage.removeItem('AKRA_WMS_DATA');
-                    if (window.sendAppLog) window.sendAppLog('แก้ชื่อสินค้า', `${this.editModal.oldName} เป็น ${this.editModal.newName}`);
-                    this.triggerToast('อัปเดตชื่อสำเร็จ');
+                    if (window.sendAppLog) window.sendAppLog('แก้ไขข้อมูลสินค้า', `${this.editModal.oldName} (แท็ก: ${this.editModal.newCategory})`);
+                    this.triggerToast('อัปเดตข้อมูลและแท็กสินค้าสำเร็จ');
                     this.editModal.show = false;
                 }
                 this.isSubmitting = false;
