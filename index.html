@@ -4,40 +4,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>W5 Warehouse App</title>
+    <title>AKRA W5 — คลังสินค้า W5</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23171c8f'/%3E%3Cpath d='M7 15 16 9l9 6v10H7z' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M6 15h20M13 25v-6h6v6' stroke='%23e35205' stroke-width='2'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
-        .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-        .fade-enter-from, .fade-leave-to { opacity: 0; }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
         
-        /* สไตล์สำหรับไฟกระพริบ Real-time */
+        :root {
+            --ci-blue: #171c8f;
+            --ci-blue-dark: #101466;
+            --ci-blue-soft: #f0f2ff;
+            --ci-orange: #e35205;
+            --ci-orange-hover: #c44300;
+            --ci-orange-soft: #fff4ed;
+            --success: #059669;
+            --success-soft: #ecfdf5;
+            --warning: #d97706;
+            --warning-soft: #fffbeb;
+            --danger: #dc2626;
+            --danger-soft: #fef2f2;
+            --slate-900: #0f172a;
+            --slate-700: #334155;
+            --slate-500: #64748b;
+            --slate-300: #cbd5e1;
+            --slate-200: #e2e8f0;
+            --slate-100: #f1f5f9;
+            --slate-50: #f8fafc;
+            --white: #ffffff;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: var(--slate-50);
+            color: var(--slate-900);
+            min-height: 100vh;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        .fade-enter-active, .fade-leave-active { transition: opacity 0.25s ease; }
+        .fade-enter-from, .fade-leave-to { opacity: 0; }
+        .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom) + 80px); }
+        
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Pulse dot for Real-time status */
         .pulse-dot {
             height: 8px; width: 8px; border-radius: 50%; display: inline-block;
-            box-shadow: 0 0 0 0 rgba(34, 197, 94, 1);
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
             animation: pulse 2s infinite;
         }
         @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
         }
+
+        .category-scroll {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            max-width: 100%;
+            width: 100%;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .category-scroll::-webkit-scrollbar { display: none; }
     </style>
 </head>
-<body class="text-gray-800">
+<body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
 
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260830.02";
+    var CURRENT_VERSION = "20260831.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -173,7 +221,6 @@
     var currentUser = null;
     var sessionToken = null;
 
-    
     function decodeJwtPayload(token) {
         try {
             if (!token || typeof token !== 'string') return null;
@@ -223,6 +270,7 @@
 
     async function verifyAccess() {
         const isPreviewEnv = window.self !== window.top || window.location.hostname === "" || ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+        window.isPreviewEnv = isPreviewEnv;
         const urlParams = new URLSearchParams(window.location.search);
         const ssoToken = urlParams.get('sso');
         const cachedToken = localStorage.getItem('akra_session_token');
@@ -254,7 +302,6 @@
                     return false;
                 }
             } else {
-                // If SSO token in URL is present but cannot decode, fallback to server verification
                 try {
                     const verifyURL = `${MAIN_SSO_API_URL}?action=verifyToken&token=${encodeURIComponent(ssoToken)}&roles=${ALLOWED_ROLES.join(',')}`;
                     const response = await fetch(verifyURL);
@@ -297,7 +344,6 @@
                     return true;
                 }
             }
-            // If cachedToken is expired/invalid, clear session and do not allow zombie access
             clearStoredSession();
         }
 
@@ -326,294 +372,378 @@
 </script>
 <!-- ========================================================== -->
 
-<div id="app" class="max-w-md mx-auto bg-gray-50 min-h-screen shadow-lg relative pb-20 overflow-x-hidden">
-    
+<div id="app" class="min-h-screen bg-slate-50 flex flex-col justify-between w-full max-w-lg mx-auto shadow-xl border-x border-slate-200 overflow-x-hidden">
+
     <!-- Offline Banner -->
-    <div v-if="!isOnline" class="bg-yellow-100 text-yellow-800 text-xs p-2 text-center border-b border-yellow-200">
-        <i class="fas fa-exclamation-triangle mr-1"></i> โหมดออฟไลน์
+    <div v-if="!isOnline" class="bg-amber-100 text-amber-900 text-xs px-4 py-2 text-center font-bold border-b border-amber-200 flex items-center justify-center gap-2">
+        <i class="fas fa-exclamation-triangle text-amber-600"></i> โหมดออฟไลน์ (เชื่อมต่อเซิร์ฟเวอร์ไม่ได้)
     </div>
 
-    <!-- โชว์เฉพาะตอนกดโหลดแบบตั้งใจ (ไม่โชว์ตอน Auto-refresh) -->
-    <div v-if="isLoading && !isSilentLoading" class="fixed inset-0 bg-white bg-opacity-80 z-[80] flex flex-col items-center justify-center">
-        <i class="fas fa-circle-notch fa-spin text-4xl text-blue-600 mb-3"></i>
-        <p class="text-gray-600 font-semibold text-sm">กำลังซิงค์ข้อมูลกับระบบคลังสินค้า...</p>
+    <!-- Loading Overlay -->
+    <div v-if="isLoading && !isSilentLoading" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] flex flex-col items-center justify-center">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-3 max-w-xs mx-4 text-center">
+            <i class="fas fa-circle-notch fa-spin text-4xl text-[#171c8f]"></i>
+            <p class="text-slate-800 font-bold text-sm">กำลังซิงค์ข้อมูลกับระบบคลัง W5...</p>
+            <p class="text-slate-500 text-xs">กรุณารอสักครู่</p>
+        </div>
     </div>
 
-    <!-- Header -->
-    <header class="bg-blue-700 text-white p-4 sticky top-0 z-10 shadow-md flex justify-between items-center">
-        <h1 class="text-xl font-bold"><i class="fas fa-warehouse mr-2"></i> คลังสินค้า W5</h1>
-        <div class="text-xs bg-blue-800 px-3 py-1.5 rounded-full flex items-center shadow-inner">
-            <i class="fas fa-user-circle mr-1.5 text-blue-300 text-sm"></i>
-            <span class="font-semibold">{{ loggedInUser }}</span>
+    <!-- Header Topbar (Matching Portfolio CI) -->
+    <header class="sticky top-0 z-40 bg-[#171c8f] text-white px-4 py-3 shadow-md flex justify-between items-center">
+        <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 bg-[#e35205] text-white font-black text-sm rounded-xl flex items-center justify-center shadow-md">
+                W5
+            </div>
+            <div>
+                <h1 class="text-base font-extrabold leading-tight tracking-tight">คลังสินค้า W5</h1>
+                <p class="text-[11px] text-indigo-200">เช็กสต็อก & เบิกจ่ายทันที</p>
+            </div>
+        </div>
+        <div class="bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span class="max-w-[100px] truncate text-slate-100">{{ loggedInUser }}</span>
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="p-4">
-        
-        <!-- ==================== TRANSACTION (เบิก-รับ อยู่หน้าแรกสุด) ==================== -->
-        <div v-show="activeTab === 'transaction'" class="animate-fade-in">
-            <h2 class="text-lg font-bold mb-4 text-gray-800">ทำรายการ เบิก / รับเข้า</h2>
+    <!-- Main Content Area -->
+    <main class="flex-1 p-3 sm:p-4 pb-safe min-w-0 w-full">
+
+        <!-- ==================== TAB 1: TRANSACTION (เบิก-รับ แคตตาล็อก) ==================== -->
+        <section v-show="activeTab === 'transaction'" class="space-y-3.5 min-w-0 w-full">
             
-            <div class="flex gap-2 mb-5 p-1 bg-gray-200 rounded-lg">
-                <button @click="form.type = 'out'" :class="form.type === 'out' ? 'bg-white text-red-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2.5 rounded-md font-bold text-sm transition-all duration-200 flex justify-center items-center">
-                    <i class="fas fa-arrow-up mr-2"></i> เบิกออก
+            <!-- Quick Mode Switcher (List-First vs Manual Form) -->
+            <div class="flex bg-slate-200/80 p-1 rounded-xl gap-1 shadow-inner text-xs font-bold w-full">
+                <button type="button" @click="txViewMode = 'catalog'" :class="txViewMode === 'catalog' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
+                    <i class="fas fa-boxes"></i> รายการสินค้าคลัง
                 </button>
-                <button @click="form.type = 'in'" :class="form.type === 'in' ? 'bg-white text-green-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'" class="flex-1 py-2.5 rounded-md font-bold text-sm transition-all duration-200 flex justify-center items-center">
-                    <i class="fas fa-arrow-down mr-2"></i> รับเข้า
+                <button type="button" @click="txViewMode = 'form'" :class="txViewMode === 'form' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
+                    <i class="fas fa-edit"></i> ฟอร์มเบิก-รับ
                 </button>
             </div>
 
-            <div class="space-y-4 bg-white p-4 border rounded-xl shadow-sm">
-                <div class="relative">
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">เลือกสินค้า <span class="text-red-500">*</span></label>
-                    <div class="relative z-30">
-                        <span class="absolute left-3 top-3 text-gray-400"><i class="fas fa-search"></i></span>
-                        <input type="text" v-model="searchTransaction" @focus="showDropdown = true" @input="handleSearchInput" placeholder="พิมพ์ชื่อเพื่อค้นหา..." class="w-full border-gray-300 border p-3 pl-9 pr-10 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition">
-                        <button v-if="searchTransaction" @click="clearSelection" class="absolute right-3 top-3 text-gray-400 hover:text-red-500 transition"><i class="fas fa-times-circle text-lg"></i></button>
-                    </div>
-                    <div v-if="showDropdown" @click="showDropdown = false" class="fixed inset-0 z-20"></div>
-                    <div v-if="showDropdown" class="absolute z-30 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                        <ul v-if="filteredTransactionProducts.length > 0">
-                            <li v-for="product in filteredTransactionProducts" :key="product.id" @click="selectTransactionProduct(product)" :class="{'bg-blue-50 border-l-4 border-blue-500': form.productId === product.id}" class="p-3 border-b border-gray-100 last:border-0 hover:bg-gray-50 cursor-pointer flex justify-between items-center text-sm transition-colors">
-                                <span class="text-gray-700 line-clamp-2 pr-2 leading-tight flex-1">{{ product.name }}</span>
-                                <span class="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-1 rounded whitespace-nowrap">เหลือ: {{ product.stock }} {{ product.unit || 'ชิ้น' }}</span>
-                            </li>
-                        </ul>
-                        <div v-else class="p-4 text-center text-gray-500 text-sm">ไม่พบสินค้าที่ค้นหา</div>
-                    </div>
-                </div>
+            <!-- MODE A: LIST-FIRST CATALOG (Simple & Visual) -->
+            <div v-show="txViewMode === 'catalog'" class="space-y-3 min-w-0 w-full">
                 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">จำนวน <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <input type="number" v-model.number="form.qty" min="1" class="w-full border-gray-300 border p-3 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition" placeholder="ระบุตัวเลข...">
-                        <span class="absolute right-4 top-3 text-gray-400 text-sm">{{ getSelectedProductUnit() }}</span>
+                <!-- Search & Category Card -->
+                <div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5 min-w-0 w-full">
+                    <div class="relative flex items-center">
+                        <i class="fas fa-search absolute left-3.5 text-slate-400 text-sm pointer-events-none"></i>
+                        <input type="text" v-model="searchTransactionList" placeholder="พิมพ์ชื่อสินค้า หรือ ค้นหา..." class="w-full bg-slate-50 border border-slate-300 focus:border-[#171c8f] focus:bg-white rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm outline-none transition focus:ring-2 focus:ring-indigo-100 font-medium">
+                        <button v-if="searchTransactionList" @click="searchTransactionList = ''" class="absolute right-3 text-slate-400 hover:text-slate-600">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
+                    </div>
+
+                    <!-- Category Scroll Pills -->
+                    <div class="category-scroll pt-0.5">
+                        <button type="button" v-for="cat in categoryList" :key="cat.id" @click="selectedCategory = cat.id" :class="selectedCategory === cat.id ? 'bg-[#171c8f] text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold'" class="px-2.5 sm:px-3 py-1 rounded-full text-xs shrink-0 transition-all">
+                            {{ cat.name }}
+                        </button>
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">ชื่อพนักงาน <span class="text-red-500">*</span></label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-3 text-gray-500"><i class="fas fa-user-check"></i></span>
-                        <input type="text" v-model="form.user" readonly class="w-full border-gray-300 border p-3 pl-9 rounded-lg text-sm bg-gray-200 text-gray-600 outline-none cursor-not-allowed font-semibold shadow-inner">
-                    </div>
+                <!-- Section Title & Item Count -->
+                <div class="flex items-center justify-between px-1">
+                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">สินค้าพร้อมเบิก</span>
+                    <span class="text-[11px] font-bold text-[#171c8f] bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                        {{ filteredCatalogProducts.length }} รายการ
+                    </span>
                 </div>
 
-                <div class="flex gap-3 pt-3">
-                    <button v-if="form.type === 'out'" @click="verifyAddPickList" class="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors flex justify-center items-center text-sm">
-                        <i class="fas fa-clipboard-list mr-1.5"></i> สั่งลงใบจัด
-                    </button>
-                    <button @click="verifyTransaction" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg shadow-md transition-colors flex justify-center items-center text-sm">
-                        <i class="fas fa-check-circle mr-1.5"></i> {{ form.type === 'in' ? 'บันทึกรับเข้า' : 'เบิกตัดสต็อก' }}
-                    </button>
+                <!-- Product List Cards -->
+                <div v-if="filteredCatalogProducts.length > 0" class="space-y-2.5">
+                    <div v-for="product in filteredCatalogProducts" :key="product.id" :class="{'opacity-60 bg-slate-100/70': product.stock <= 0}" class="bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 shadow-sm flex items-center justify-between gap-2 sm:gap-3 hover:border-indigo-200 transition">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2">{{ product.name }}</h3>
+                            <div class="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
+                                <span class="text-[9px] sm:text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded-md">
+                                    {{ getProductCategoryName(product) }}
+                                </span>
+                                <span v-if="product.unit" class="text-[9px] sm:text-[10px] text-slate-400 font-medium">หน่วย: {{ product.unit }}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                            <div class="text-right">
+                                <span class="block text-[9px] sm:text-[10px] font-semibold text-slate-400">คงเหลือ</span>
+                                <div class="font-extrabold text-sm sm:text-base leading-none" :class="product.stock <= 0 ? 'text-rose-600' : (product.stock < 20 ? 'text-amber-600' : 'text-emerald-600')">
+                                    {{ product.stock }} <span class="text-[10px] sm:text-xs font-normal text-slate-600">{{ product.unit || 'ชิ้น' }}</span>
+                                </div>
+                            </div>
+                            <button type="button" @click="openWithdrawStepper(product)" :disabled="product.stock <= 0" class="bg-[#e35205] hover:bg-[#c44300] active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-extrabold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl shadow-md transition flex items-center gap-1">
+                                <i class="fas fa-arrow-up text-[10px]"></i> <span>เบิก</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div v-else class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 space-y-1">
+                    <i class="fas fa-box-open text-3xl text-slate-300 mb-1"></i>
+                    <p class="text-sm font-bold text-slate-600">ไม่พบรายการสินค้า</p>
+                    <p class="text-xs text-slate-400">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
                 </div>
             </div>
 
-            <!-- 🌟 เพิ่มรายการสต็อกคงเหลือไว้ด้านล่างหน้าเบิกรับ -->
-            <div class="mt-8 border-t border-gray-200 pt-6">
-                <h2 class="text-lg font-bold mb-3 text-gray-800 flex items-center">
-                    <i class="fas fa-boxes text-blue-600 mr-2"></i> สต็อกสินค้าปัจจุบัน
-                </h2>
-                <div class="relative mb-3">
-                    <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-search"></i></span>
-                    <input type="text" v-model="searchTransactionList" placeholder="ค้นหาดูสต็อกสินค้า..." class="w-full border-gray-300 border p-2 pl-9 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition shadow-sm">
+            <!-- MODE B: CLASSIC TRANSACTION FORM (Inbound / Outbound / Pick List) -->
+            <div v-show="txViewMode === 'form'" class="space-y-4">
+                <div class="flex gap-2 p-1 bg-slate-200 rounded-xl">
+                    <button type="button" @click="form.type = 'out'" :class="form.type === 'out' ? 'bg-white text-rose-600 shadow-sm font-extrabold' : 'text-slate-600 font-semibold'" class="flex-1 py-2.5 rounded-lg text-xs transition flex justify-center items-center gap-1.5">
+                        <i class="fas fa-arrow-up"></i> เบิกออก (-)
+                    </button>
+                    <button type="button" @click="form.type = 'in'" :class="form.type === 'in' ? 'bg-white text-emerald-600 shadow-sm font-extrabold' : 'text-slate-600 font-semibold'" class="flex-1 py-2.5 rounded-lg text-xs transition flex justify-center items-center gap-1.5">
+                        <i class="fas fa-arrow-down"></i> รับเข้า (+)
+                    </button>
                 </div>
-                <div class="bg-white border rounded-lg shadow-sm">
-                    <ul v-if="filteredTransactionListProducts.length > 0" class="divide-y max-h-[350px] overflow-y-auto">
-                        <li v-for="product in filteredTransactionListProducts" :key="product.id" class="p-3 flex justify-between items-center text-sm hover:bg-gray-50 transition">
-                            <span class="text-gray-700 line-clamp-2 pr-2 leading-tight flex-1">{{ product.name }}</span>
-                            <div class="flex items-center gap-2">
-                                <span :class="product.stock > 0 ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-500'" class="font-bold px-2 py-1 rounded-md min-w-[3rem] text-center shadow-sm">
-                                    {{ product.stock }} <span class="font-normal text-xs">{{ product.unit || 'ชิ้น' }}</span>
-                                </span>
-                                <button @click="quickWithdraw(product)" class="text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-800 px-2 py-1.5 rounded-md border border-red-100 transition shadow-sm flex items-center gap-1">
-                                    <i class="fas fa-arrow-up text-[10px]"></i> <span class="font-bold text-xs">เบิก</span>
+
+                <div class="bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-3.5">
+                    <div class="relative">
+                        <label class="block text-xs font-bold text-slate-700 mb-1">เลือกสินค้า <span class="text-rose-500">*</span></label>
+                        <div class="relative z-30">
+                            <span class="absolute left-3.5 top-3 text-slate-400"><i class="fas fa-search"></i></span>
+                            <input type="text" v-model="searchTransaction" @focus="showDropdown = true" @input="handleSearchInput" placeholder="พิมพ์ชื่อเพื่อค้นหา..." class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 pl-9 pr-9 rounded-xl text-sm outline-none transition focus:ring-2 focus:ring-indigo-100 font-medium">
+                            <button v-if="searchTransaction" @click="clearSelection" class="absolute right-3 top-2.5 text-slate-400 hover:text-rose-500 transition">
+                                <i class="fas fa-times-circle text-base"></i>
+                            </button>
+                        </div>
+                        <div v-if="showDropdown" @click="showDropdown = false" class="fixed inset-0 z-20"></div>
+                        <div v-if="showDropdown" class="absolute z-30 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto divide-y divide-slate-100">
+                            <ul v-if="filteredTransactionProducts.length > 0">
+                                <li v-for="product in filteredTransactionProducts" :key="product.id" @click="selectTransactionProduct(product)" :class="{'bg-indigo-50/80 font-bold border-l-4 border-[#171c8f]': form.productId === product.id}" class="p-3 hover:bg-slate-50 cursor-pointer flex justify-between items-center text-xs transition">
+                                    <span class="text-slate-800 line-clamp-2 pr-2 flex-1">{{ product.name }}</span>
+                                    <span class="font-extrabold px-2 py-0.5 rounded text-[11px] shrink-0" :class="product.stock <= 0 ? 'text-rose-600 bg-rose-50' : 'text-slate-700 bg-slate-100'">
+                                        เหลือ: {{ product.stock }} {{ product.unit || 'ชิ้น' }}
+                                    </span>
+                                </li>
+                            </ul>
+                            <div v-else class="p-4 text-center text-slate-400 text-xs font-semibold">ไม่พบสินค้าที่ค้นหา</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">จำนวน <span class="text-rose-500">*</span></label>
+                        <div class="relative">
+                            <input type="number" v-model.number="form.qty" min="1" class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-sm outline-none transition focus:ring-2 focus:ring-indigo-100 font-bold" placeholder="ระบุตัวเลข...">
+                            <span class="absolute right-3.5 top-2.5 text-slate-400 text-xs font-semibold">{{ getSelectedProductUnit() }}</span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อผู้ทำรายการ</label>
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-2.5 text-slate-400"><i class="fas fa-user-check"></i></span>
+                            <input type="text" v-model="form.user" readonly class="w-full bg-slate-100 border border-slate-200 text-slate-600 p-2.5 pl-9 rounded-xl text-xs font-bold cursor-not-allowed outline-none">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-2">
+                        <button v-if="form.type === 'out'" @click="verifyAddPickList" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md transition flex justify-center items-center text-xs gap-1.5">
+                            <i class="fas fa-clipboard-list"></i> สั่งลงใบจัด
+                        </button>
+                        <button @click="verifyTransaction" class="flex-1 bg-[#171c8f] hover:bg-[#101466] text-white font-bold py-3 rounded-xl shadow-md transition flex justify-center items-center text-xs gap-1.5">
+                            <i class="fas fa-check-circle"></i> {{ form.type === 'in' ? 'บันทึกรับเข้า' : 'เบิกตัดสต็อก' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==================== TAB 2: PICK LIST (ใบจัดสินค้า) ==================== -->
+        <section v-show="activeTab === 'picklist'" class="space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                        <i class="fas fa-clipboard-check text-amber-500"></i> รายการใบจัดสินค้ารอหยิบ
+                    </h2>
+                    <p class="text-xs text-slate-500">รายการขอเบิกที่บันทึกไว้ล่วงหน้าเพื่อเตรียมหยิบ</p>
+                </div>
+                <span class="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+                    {{ pickList.length }} รายการ
+                </span>
+            </div>
+
+            <div v-if="pickList.length > 0" class="space-y-3">
+                <div v-for="item in pickList" :key="item.pickId" class="bg-white p-4 border-l-4 border-amber-500 border-y border-r border-slate-200 rounded-2xl shadow-sm space-y-3">
+                    <div class="flex justify-between items-start gap-2">
+                        <h3 class="text-sm font-bold text-slate-900 leading-snug">{{ item.productName }}</h3>
+                        <span class="text-[11px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shrink-0">
+                            ขอ: {{ item.qty }} {{ getProductUnit(item.productId) }}
+                        </span>
+                    </div>
+
+                    <div class="text-[11px] text-slate-500 flex flex-wrap gap-x-3 gap-y-1">
+                        <span><i class="fas fa-user-edit mr-1 text-slate-400"></i>ผู้สั่ง: <strong>{{ item.requestedBy }}</strong></span>
+                        <span><i class="far fa-clock mr-1 text-slate-400"></i>{{ item.timeStr }}</span>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-1 border-t border-slate-100">
+                        <button @click="confirmRemovePickList(item)" class="text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition text-xs font-bold">
+                            ลบ
+                        </button>
+                        <button @click="openPickModal(item)" class="bg-[#e35205] hover:bg-[#c44300] text-white px-4 py-1.5 rounded-lg transition text-xs font-extrabold shadow-sm flex items-center gap-1.5">
+                            <i class="fas fa-box-open"></i> หยิบสินค้า
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div v-else class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center flex flex-col items-center gap-2">
+                <div class="w-14 h-14 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                    <i class="fas fa-clipboard-check text-2xl"></i>
+                </div>
+                <h3 class="text-sm font-bold text-slate-600">ไม่มีรายการรอเบิก</h3>
+                <p class="text-xs text-slate-400">คุณสามารถสั่งลงใบจัดได้จากหน้าเบิกสินค้า</p>
+            </div>
+        </section>
+
+        <!-- ==================== TAB 3: DASHBOARD & HISTORY ==================== -->
+        <section v-show="activeTab === 'dashboard'" class="space-y-4">
+            
+            <!-- Realtime Status Banner -->
+            <div class="flex justify-between items-center">
+                <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-[#171c8f]"></i> แดชบอร์ดคลังสินค้า
+                </h2>
+                <div class="text-[11px] text-slate-500 flex items-center bg-white px-2.5 py-1 rounded-full shadow-sm border border-slate-200">
+                    <span class="pulse-dot mr-1.5"></span> อัปเดตสด
+                </div>
+            </div>
+
+            <!-- KPI Cards Grid (4 Box) -->
+            <div class="grid grid-cols-2 gap-2.5">
+                <div class="bg-white border-l-4 border-indigo-600 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start text-slate-500">
+                        <span class="text-[11px] font-bold">SKU ทั้งหมด</span>
+                        <i class="fas fa-boxes text-indigo-200 text-sm"></i>
+                    </div>
+                    <p class="text-2xl font-black text-slate-900 mt-1">{{ products.length }}</p>
+                </div>
+                <div class="bg-white border-l-4 border-emerald-500 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start text-slate-500">
+                        <span class="text-[11px] font-bold">ยอดรวมคลัง</span>
+                        <i class="fas fa-layer-group text-emerald-200 text-sm"></i>
+                    </div>
+                    <p class="text-2xl font-black text-slate-900 mt-1">{{ totalItemsInStock }}</p>
+                </div>
+                <div class="bg-white border-l-4 border-rose-500 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start text-rose-500">
+                        <span class="text-[11px] font-bold">ของใกล้หมด</span>
+                        <i class="fas fa-exclamation-triangle text-rose-200 text-sm"></i>
+                    </div>
+                    <p class="text-2xl font-black text-rose-600 mt-1">{{ lowStockItems.length }} <span class="text-xs font-normal text-slate-400">รายการ</span></p>
+                </div>
+                <div class="bg-white border-l-4 border-purple-500 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start text-slate-500">
+                        <span class="text-[11px] font-bold">เคลื่อนไหววันนี้</span>
+                        <i class="fas fa-bolt text-purple-200 text-sm"></i>
+                    </div>
+                    <p class="text-2xl font-black text-slate-900 mt-1">{{ todayHistoryCount }} <span class="text-xs font-normal text-slate-400">ครั้ง</span></p>
+                </div>
+            </div>
+
+            <!-- Low Stock Warning Alert -->
+            <div v-if="lowStockItems.length > 0" class="bg-rose-50 border border-rose-200 rounded-2xl overflow-hidden shadow-sm">
+                <div class="bg-rose-100/70 px-3.5 py-2 border-b border-rose-200 flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-rose-800 flex items-center gap-1.5">
+                        <i class="fas fa-exclamation-circle text-rose-600"></i> แจ้งเตือนสินค้าใกล้หมด (ต่ำกว่า 20)
+                    </span>
+                    <span class="text-[10px] font-bold bg-white text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">{{ lowStockItems.length }}</span>
+                </div>
+                <ul class="divide-y divide-rose-100 max-h-36 overflow-y-auto">
+                    <li v-for="item in lowStockItems" :key="item.id" class="px-3.5 py-2 text-xs flex justify-between items-center hover:bg-rose-100/40">
+                        <span class="text-slate-800 line-clamp-1 pr-2 flex-1 font-medium">{{ item.name }}</span>
+                        <span class="font-extrabold text-rose-600 bg-white px-2 py-0.5 rounded border border-rose-200 text-[11px] shrink-0">
+                            {{ item.stock }} {{ item.unit }}
+                        </span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- History Section -->
+            <div class="space-y-2.5 pt-2">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
+                        <i class="fas fa-history text-slate-500"></i> ประวัติล่าสุด (Log)
+                    </h3>
+                    <button @click="exportHistoryToCSV" class="text-xs font-bold text-[#171c8f] hover:text-[#101466] bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 flex items-center gap-1 transition">
+                        <i class="fas fa-download"></i> ดาวน์โหลด CSV
+                    </button>
+                </div>
+
+                <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                    <ul v-if="history.length > 0" class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                        <li v-for="(log, index) in reversedHistory" :key="index" class="p-3 text-xs flex justify-between items-center hover:bg-slate-50 transition">
+                            <div class="flex-1 pr-2 min-w-0">
+                                <p class="font-bold text-slate-800 truncate" :class="{'text-rose-500 line-through': log.productName.includes('[ยกเลิก]')}">{{ log.productName }}</p>
+                                <p class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                    <span><i class="fas fa-user-circle text-slate-300 mr-1"></i>{{ log.user }}</span>
+                                    <span>•</span>
+                                    <span>{{ log.time ? formatDisplayDate(log.date) + ' ' + formatDisplayTime(log.time) : formatDate(log.date) }}</span>
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <div v-if="log.type === 'adjust'" class="bg-purple-100 text-purple-700 font-bold px-2 py-0.5 rounded text-[10px]">
+                                    ปรับสต็อก
+                                </div>
+                                <div v-else :class="log.type === 'in' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'" class="font-extrabold px-2.5 py-0.5 rounded-full text-[11px]">
+                                    <span v-if="log.type === 'in'">+{{ log.qty }}</span>
+                                    <span v-else>-{{ log.qty }}</span>
+                                </div>
+                                <button v-if="!log.productName.includes('[ยกเลิก]') && log.type !== 'adjust'" @click="confirmUndo(log)" class="text-slate-400 hover:text-rose-600 p-1 transition" title="ยกเลิกรายการนี้">
+                                    <i class="fas fa-undo text-xs"></i>
                                 </button>
                             </div>
                         </li>
                     </ul>
-                    <div v-else class="p-6 text-center text-gray-400 text-sm">ไม่พบสินค้าที่ค้นหา</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== DASHBOARD (อัปเกรดเป็น Real-time) ==================== -->
-        <div v-show="activeTab === 'dashboard'" class="animate-fade-in">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-lg font-bold text-gray-800 flex items-center">
-                    <i class="fas fa-chart-pie text-blue-600 mr-2"></i> Real-time Dashboard
-                </h2>
-                <div class="text-[10px] text-gray-400 flex items-center bg-white px-2 py-1 rounded-full shadow-sm border">
-                    <span class="pulse-dot bg-green-500 mr-1.5"></span> อัปเดตสด
-                </div>
-            </div>
-
-            <!-- กริตสรุปข้อมูล 4 ช่อง -->
-            <div class="grid grid-cols-2 gap-3 mb-6">
-                <div class="bg-white border-l-4 border-blue-500 p-4 rounded-r-lg shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">SKU ทั้งหมด</p>
-                        <i class="fas fa-boxes text-blue-200"></i>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800">{{ products.length }}</p>
-                </div>
-                <div class="bg-white border-l-4 border-green-500 p-4 rounded-r-lg shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">ยอดรวมคลัง</p>
-                        <i class="fas fa-layer-group text-green-200"></i>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800">{{ totalItemsInStock }}</p>
-                </div>
-                <div class="bg-white border-l-4 border-red-500 p-4 rounded-r-lg shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <p class="text-xs text-gray-500 font-semibold mb-1 text-red-500">ของใกล้หมด</p>
-                        <i class="fas fa-exclamation-triangle text-red-200"></i>
-                    </div>
-                    <p class="text-2xl font-bold text-red-600">{{ lowStockItems.length }} <span class="text-xs font-normal text-gray-400">รายการ</span></p>
-                </div>
-                <div class="bg-white border-l-4 border-purple-500 p-4 rounded-r-lg shadow-sm">
-                    <div class="flex justify-between items-start">
-                        <p class="text-xs text-gray-500 font-semibold mb-1">ความเคลื่อนไหว</p>
-                        <i class="fas fa-bolt text-purple-200"></i>
-                    </div>
-                    <p class="text-2xl font-bold text-gray-800">{{ todayHistoryCount }} <span class="text-xs font-normal text-gray-400">ครั้งวันนี้</span></p>
-                </div>
-            </div>
-
-            <!-- ใบจัดสินค้าค้างรอหยิบ -->
-            <button v-if="pickList.length > 0" @click="activeTab = 'picklist'" class="w-full mb-6 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center justify-between shadow-sm hover:bg-amber-100 transition text-left">
-                <span class="flex items-center text-sm font-bold text-amber-800">
-                    <i class="fas fa-clipboard-list text-amber-500 mr-2"></i> ใบจัดสินค้าค้างรอหยิบ
-                </span>
-                <span class="font-bold text-amber-700 bg-white px-2.5 py-0.5 rounded-full border border-amber-200 shadow-sm text-sm">{{ pickList.length }} รายการ</span>
-            </button>
-
-            <!-- แจ้งเตือนสินค้าใกล้หมด (แสดงเมื่อมีของต่ำกว่า 20 ชิ้น) -->
-            <div v-if="lowStockItems.length > 0" class="mb-6 bg-red-50 border border-red-100 rounded-xl overflow-hidden shadow-sm">
-                <div class="bg-red-100 px-3 py-2 border-b border-red-200 flex items-center">
-                    <i class="fas fa-exclamation-circle text-red-500 mr-2 text-sm"></i>
-                    <span class="text-sm font-bold text-red-700">แจ้งเตือนสินค้าใกล้หมด (ต่ำกว่า 20)</span>
-                </div>
-                <ul class="divide-y divide-red-100 max-h-40 overflow-y-auto">
-                    <li v-for="item in lowStockItems" :key="item.id" class="px-3 py-2 text-xs flex justify-between items-center hover:bg-red-100/50">
-                        <span class="text-gray-700 line-clamp-1 pr-2 flex-1">{{ item.name }}</span>
-                        <span class="font-bold text-red-600 bg-white px-2 py-0.5 rounded border border-red-200 shadow-sm">{{ item.stock }} {{ item.unit }}</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="flex justify-between items-end mb-3 mt-4">
-                <h2 class="text-lg font-bold text-gray-800 flex items-center">
-                    <i class="fas fa-history text-gray-600 mr-2"></i> ประวัติล่าสุด (Log)
-                </h2>
-                <button @click="exportHistoryToCSV" class="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 px-2 py-1 rounded border border-blue-100 flex items-center transition">
-                    <i class="fas fa-download mr-1"></i> ดาวน์โหลด
-                </button>
-            </div>
-            
-            <div class="bg-white border rounded-lg overflow-hidden shadow-sm mb-6">
-                <ul v-if="history.length > 0" class="divide-y max-h-60 overflow-y-auto">
-                    <li v-for="(log, index) in reversedHistory" :key="index" class="p-3 text-sm flex justify-between items-center hover:bg-gray-50 transition">
-                        <div class="flex-1 pr-2">
-                            <p class="font-semibold text-gray-800 line-clamp-1" :class="{'text-red-500 line-through': log.productName.includes('[ยกเลิก]')}">{{ log.productName }}</p>
-                            <p class="text-[11px] text-gray-500 mt-1">
-                                <i class="fas fa-user-circle text-gray-400 mr-1"></i>{{ log.user }} 
-                                <span class="mx-1 text-gray-300">|</span> 
-                                <i class="far fa-clock text-gray-400 mr-1"></i>
-                                <span v-if="log.time">{{ formatDisplayDate(log.date) }} - {{ formatDisplayTime(log.time) }}</span>
-                                <span v-else>{{ formatDate(log.date) }}</span>
-                            </p>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div v-if="log.type === 'adjust'" class="bg-purple-100 text-purple-700 font-bold px-2 py-1 rounded-md text-[10px] shadow-sm">
-                                <i class="fas fa-edit mr-1"></i>ปรับสต็อก
-                            </div>
-                            <div v-else :class="log.type === 'in' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="font-bold px-3 py-1 rounded-full text-xs whitespace-nowrap shadow-sm">
-                                <span v-if="log.type === 'in'"><i class="fas fa-arrow-down mr-1"></i>รับ {{ log.qty }}</span>
-                                <span v-else><i class="fas fa-arrow-up mr-1"></i>เบิก {{ log.qty }}</span>
-                            </div>
-                            <button v-if="!log.productName.includes('[ยกเลิก]') && log.type !== 'adjust'" @click="confirmUndo(log)" class="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition" title="ยกเลิกรายการนี้">
-                                <i class="fas fa-undo"></i>
-                            </button>
-                        </div>
-                    </li>
-                </ul>
-                <div v-else class="p-8 text-center text-gray-400 flex flex-col items-center">
-                    <i class="fas fa-clipboard-list text-3xl mb-2 opacity-50"></i><p class="text-sm">ยังไม่มีการเคลื่อนไหว</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- ==================== PICK LIST ==================== -->
-        <div v-show="activeTab === 'picklist'" class="animate-fade-in">
-            <h2 class="text-lg font-bold mb-4 text-gray-800 flex items-center"><i class="fas fa-clipboard-check text-orange-500 mr-2"></i> รายการใบจัดสินค้า (รอเบิก)</h2>
-            <div v-if="pickList.length > 0" class="space-y-3">
-                <div v-for="item in pickList" :key="item.pickId" class="bg-white p-4 border border-orange-200 rounded-xl shadow-sm relative overflow-hidden">
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-400"></div>
-                    <div class="pl-2">
-                        <h3 class="font-bold text-gray-800 mb-1 leading-tight">{{ item.productName }}</h3>
-                        <div class="text-xs text-gray-500 mb-3 flex flex-wrap gap-x-3 gap-y-1">
-                            <span><i class="fas fa-user-edit mr-1"></i>สั่งโดย: {{ item.requestedBy }}</span>
-                            <span><i class="far fa-clock mr-1"></i>{{ item.timeStr }}</span>
-                        </div>
-                        <div class="flex justify-between items-end border-t border-gray-100 pt-3">
-                            <div class="text-sm">
-                                <span class="text-gray-500">จำนวนที่ขอ: </span>
-                                <span class="font-bold text-orange-600 text-lg">{{ item.qty }}</span> <span class="text-gray-500 text-xs">{{ getProductUnit(item.productId) }}</span>
-                            </div>
-                            <div class="flex gap-2">
-                                <button @click="confirmRemovePickList(item)" class="text-gray-400 hover:text-red-600 bg-gray-50 hover:bg-red-50 px-3 py-1.5 rounded-lg transition text-xs font-bold border border-gray-200">ลบ</button>
-                                <button @click="openPickModal(item)" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg transition text-sm font-bold shadow-sm flex items-center">
-                                    <i class="fas fa-box-open mr-1.5"></i> หยิบสินค้า
-                                </button>
-                            </div>
-                        </div>
+                    <div v-else class="p-8 text-center text-slate-400 text-xs font-semibold">
+                        ยังไม่มีประวัติการเคลื่อนไหว
                     </div>
                 </div>
             </div>
-            <div v-else class="bg-white border-2 border-dashed border-gray-200 rounded-xl p-10 text-center flex flex-col items-center">
-                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3"><i class="fas fa-clipboard-check text-2xl text-gray-300"></i></div>
-                <h3 class="text-gray-500 font-bold mb-1">ไม่มีรายการรอเบิก</h3>
-            </div>
-        </div>
 
-        <!-- ==================== MANAGE PRODUCTS (เฉพาะ ADMIN) ==================== -->
-        <div v-if="isAdmin" v-show="activeTab === 'manage'" class="animate-fade-in">
-            <h2 class="text-lg font-bold mb-4 text-gray-800">จัดการรายการสินค้า</h2>
-            
-            <div class="bg-white p-4 border rounded-xl shadow-sm mb-5 relative">
-                <div class="flex items-center justify-between mb-3">
-                    <h3 class="text-sm font-bold text-gray-700"><i class="fas fa-plus-circle text-green-500 mr-1"></i> เพิ่มสินค้าใหม่</h3>
-                    <span class="text-[11px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full font-medium border border-blue-100 flex items-center gap-1">
-                        <i class="fas fa-database"></i> ค้นหาจากฐานข้อมูลกลาง
+        </section>
+
+        <!-- ==================== TAB 4: MANAGE PRODUCTS (ADMIN ONLY) ==================== -->
+        <section v-if="isAdmin" v-show="activeTab === 'manage'" class="space-y-4">
+            <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <i class="fas fa-box-open text-[#171c8f]"></i> จัดการรายการสินค้าคลัง
+            </h2>
+
+            <!-- Add Product Card -->
+            <div class="bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-3 relative">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                        <i class="fas fa-plus-circle text-emerald-500"></i> เพิ่มสินค้าใหม่เข้า W5
+                    </span>
+                    <span class="text-[10px] text-[#171c8f] bg-indigo-50 px-2 py-0.5 rounded-full font-bold border border-indigo-100">
+                        <i class="fas fa-database mr-1"></i> เชื่อมฐานข้อมูลกลาง
                     </span>
                 </div>
+
                 <div class="relative">
                     <div class="flex gap-2">
                         <div class="relative flex-[2]">
-                            <input type="text" v-model="newProductName" @input="onMasterSearchInput" @focus="onMasterSearchInput" class="w-full border-gray-300 border p-2.5 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="พิมพ์ชื่อหรือค้นหาจากฐานข้อมูล...">
-                            <span v-if="isSearchingMaster" class="absolute right-3 top-3 text-blue-500 text-xs"><i class="fas fa-circle-notch fa-spin"></i></span>
+                            <input type="text" v-model="newProductName" @input="onMasterSearchInput" @focus="onMasterSearchInput" class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-xs outline-none transition font-medium" placeholder="พิมพ์ชื่อหรือค้นหาจาก Product Master...">
+                            <span v-if="isSearchingMaster" class="absolute right-3 top-2.5 text-indigo-500 text-xs"><i class="fas fa-circle-notch fa-spin"></i></span>
                         </div>
-                        <input type="text" v-model="newProductUnit" @keyup.enter="addProduct" class="flex-[1] border-gray-300 border p-2.5 rounded-lg text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="หน่วย..">
-                        <button @click="addProduct" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition shrink-0">เพิ่ม</button>
+                        <input type="text" v-model="newProductUnit" @keyup.enter="addProduct" class="flex-[1] bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-xs outline-none transition font-medium" placeholder="หน่วย..">
+                        <button @click="addProduct" :disabled="isSubmitting" class="bg-slate-900 hover:bg-black text-white px-4 py-2.5 rounded-xl text-xs font-extrabold transition shrink-0">
+                            เพิ่ม
+                        </button>
                     </div>
 
-                    <!-- Dropdown ผลการค้นหาจากฐานข้อมูลกลาง -->
-                    <div v-if="showMasterDropdown && masterSearchResults.length > 0" class="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl z-50 max-h-60 overflow-y-auto divide-y">
-                        <div class="p-2 bg-blue-50 text-[11px] font-bold text-blue-800 flex justify-between items-center sticky top-0 border-b">
-                            <span><i class="fas fa-box-open mr-1"></i> พบ {{ masterSearchResults.length }} รายการในฐานข้อมูลกลาง (คลิกเพื่อเลือก)</span>
-                            <button @click="showMasterDropdown = false" class="text-gray-400 hover:text-gray-600 px-1"><i class="fas fa-times"></i></button>
+                    <!-- Master Autocomplete Dropdown -->
+                    <div v-if="showMasterDropdown && masterSearchResults.length > 0" class="absolute left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 max-h-60 overflow-y-auto divide-y divide-slate-100">
+                        <div class="p-2.5 bg-indigo-50 text-[11px] font-bold text-indigo-900 flex justify-between items-center sticky top-0 border-b border-indigo-100">
+                            <span><i class="fas fa-box-open mr-1"></i> พบ {{ masterSearchResults.length }} รายการ (คลิกเพื่อเลือก)</span>
+                            <button @click="showMasterDropdown = false" class="text-slate-400 hover:text-slate-600 px-1"><i class="fas fa-times"></i></button>
                         </div>
-                        <div v-for="item in masterSearchResults" :key="item.id" @click="selectMasterProduct(item)" class="p-2.5 hover:bg-blue-50 cursor-pointer flex justify-between items-center transition">
-                            <div class="flex flex-col flex-1 pr-2">
-                                <span class="text-sm font-medium text-gray-800">{{ item.name }}</span>
+                        <div v-for="item in masterSearchResults" :key="item.id" @click="selectMasterProduct(item)" class="p-3 hover:bg-indigo-50/60 cursor-pointer flex justify-between items-center text-xs transition">
+                            <div class="flex flex-col flex-1 pr-2 min-w-0">
+                                <span class="font-bold text-slate-800 truncate">{{ item.name }}</span>
                                 <div class="flex items-center gap-1.5 mt-0.5">
-                                    <span v-if="item.sku" class="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded font-mono">{{ item.sku }}</span>
-                                    <span v-if="item.category" class="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded">{{ item.category }}</span>
+                                    <span v-if="item.sku" class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded font-mono">{{ item.sku }}</span>
+                                    <span v-if="item.category" class="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.2 rounded font-semibold">{{ item.category }}</span>
                                 </div>
                             </div>
-                            <span class="text-xs bg-green-50 text-green-700 font-semibold px-2 py-1 rounded border border-green-200 shrink-0">
+                            <span class="text-[11px] bg-emerald-50 text-emerald-700 font-bold px-2 py-0.5 rounded border border-emerald-200 shrink-0">
                                 {{ item.unit || 'ชิ้น' }}
                             </span>
                         </div>
@@ -621,139 +751,183 @@
                 </div>
             </div>
 
-            <div class="bg-white border rounded-xl shadow-sm overflow-hidden">
-                <div class="p-3 bg-gray-50 border-b flex flex-col gap-3">
-                    <span class="text-sm font-bold text-gray-600">รายการสินค้าทั้งหมด ({{ products.length }})</span>
+            <!-- Product Master List -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-2">
+                <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-col gap-2">
+                    <span class="text-xs font-bold text-slate-600">รายการสินค้าทั้งหมด ({{ products.length }})</span>
                     <div class="relative">
-                        <span class="absolute left-3 top-2.5 text-gray-400"><i class="fas fa-search"></i></span>
-                        <input type="text" v-model="searchManage" placeholder="ค้นหาสินค้าที่ต้องการจัดการ..." class="w-full border-gray-300 border p-2 pl-9 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition shadow-sm">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                        <input type="text" v-model="searchManage" placeholder="ค้นหาสินค้าที่ต้องการจัดการ..." class="w-full bg-white border border-slate-300 focus:border-[#171c8f] p-2 pl-8 rounded-xl text-xs outline-none transition font-medium shadow-sm">
                     </div>
                 </div>
-                <ul v-if="filteredManageProducts.length > 0" class="divide-y max-h-[500px] overflow-y-auto">
-                    <li v-for="product in filteredManageProducts" :key="product.id" class="p-3 flex justify-between items-center text-sm hover:bg-gray-50">
-                        <div class="flex-1 pr-2">
-                            <span class="text-gray-700 line-clamp-2 leading-tight">{{ product.name }}</span>
-                            <span class="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded mt-1 inline-block border">คงเหลือ: {{ product.stock }} {{ product.unit }}</span>
+
+                <ul v-if="filteredManageProducts.length > 0" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                    <li v-for="product in filteredManageProducts" :key="product.id" class="p-3 flex justify-between items-center text-xs hover:bg-slate-50 transition">
+                        <div class="flex-1 pr-2 min-w-0">
+                            <p class="font-bold text-slate-800 leading-tight truncate">{{ product.name }}</p>
+                            <span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mt-1 inline-block border border-slate-200">คงเหลือ: {{ product.stock }} {{ product.unit }}</span>
                         </div>
-                        <div class="flex gap-1 ml-2">
-                            <button @click="openAdjustModal(product)" class="text-purple-500 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 p-2 rounded-md transition border border-purple-100" title="ปรับสต็อก">
+                        <div class="flex gap-1 shrink-0">
+                            <button @click="openAdjustModal(product)" class="text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 p-2 rounded-lg transition border border-purple-100" title="ปรับสต็อก">
                                 <i class="fas fa-calculator"></i>
                             </button>
-                            <button @click="openEditModal(product)" class="text-blue-500 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 p-2 rounded-md transition" title="แก้ไขชื่อ">
+                            <button @click="openEditModal(product)" class="text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 p-2 rounded-lg transition" title="แก้ไขชื่อ">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button @click="confirmDelete(product)" class="text-red-400 hover:text-red-600 bg-red-50 hover:bg-red-100 p-2 rounded-md transition" title="ลบสินค้า">
+                            <button @click="confirmDelete(product)" class="text-rose-500 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 p-2 rounded-lg transition" title="ลบสินค้า">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </div>
                     </li>
                 </ul>
-                <div v-else class="p-6 text-center text-gray-400 text-sm">ไม่พบสินค้า</div>
+                <div v-else class="p-6 text-center text-slate-400 text-xs font-semibold">
+                    ไม่พบสินค้า
+                </div>
             </div>
-        </div>
+
+        </section>
 
     </main>
 
-    <!-- Bottom Navigation (เรียงใหม่ ให้เบิกรับอยู่ซ้ายสุด) -->
-    <nav class="fixed bottom-0 w-full max-w-md bg-white border-t flex justify-between text-xs text-gray-500 pb-safe shadow-[0_-5px_15px_rgba(0,0,0,0.05)] z-10">
-        <button @click="activeTab = 'transaction'" :class="{'text-blue-700 font-bold': activeTab === 'transaction'}" class="flex-1 py-3.5 flex flex-col items-center gap-1.5 transition-colors relative">
-            <i class="fas fa-exchange-alt text-[20px]"></i> เบิก-รับ
-            <div v-if="activeTab === 'transaction'" class="absolute top-0 w-8 h-1 bg-blue-700 rounded-b-md"></div>
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-slate-200 flex justify-around text-[11px] font-bold text-slate-500 shadow-2xl z-30">
+        <button type="button" @click="activeTab = 'transaction'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'transaction'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+            <i class="fas fa-boxes text-base"></i>
+            <span>เบิก-รับ</span>
+            <div v-if="activeTab === 'transaction'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
-        <button @click="activeTab = 'picklist'" :class="{'text-blue-700 font-bold': activeTab === 'picklist'}" class="flex-1 py-3.5 flex flex-col items-center gap-1.5 transition-colors relative">
+        <button type="button" @click="activeTab = 'picklist'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'picklist'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
             <div class="relative">
-                <i class="fas fa-clipboard-check text-[20px]"></i>
-                <div v-if="pickList.length > 0" class="absolute -top-1.5 -right-2 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center border border-white">{{ pickList.length }}</div>
+                <i class="fas fa-clipboard-check text-base"></i>
+                <span v-if="pickList.length > 0" class="absolute -top-1.5 -right-2.5 bg-rose-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center border border-white">{{ pickList.length }}</span>
             </div>
-            ใบจัด
-            <div v-if="activeTab === 'picklist'" class="absolute top-0 w-8 h-1 bg-blue-700 rounded-b-md"></div>
+            <span>ใบจัด</span>
+            <div v-if="activeTab === 'picklist'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
-        <button @click="activeTab = 'dashboard'" :class="{'text-blue-700 font-bold': activeTab === 'dashboard'}" class="flex-1 py-3.5 flex flex-col items-center gap-1.5 transition-colors relative">
-            <i class="fas fa-chart-pie text-[20px]"></i> แดชบอร์ด
-            <div v-if="activeTab === 'dashboard'" class="absolute top-0 w-8 h-1 bg-blue-700 rounded-b-md"></div>
+        <button type="button" @click="activeTab = 'dashboard'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'dashboard'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+            <i class="fas fa-chart-pie text-base"></i>
+            <span>แดชบอร์ด</span>
+            <div v-if="activeTab === 'dashboard'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
-        <button v-if="isAdmin" @click="activeTab = 'manage'" :class="{'text-blue-700 font-bold': activeTab === 'manage'}" class="flex-1 py-3.5 flex flex-col items-center gap-1.5 transition-colors relative">
-            <i class="fas fa-box-open text-[20px]"></i> จัดการ
-            <div v-if="activeTab === 'manage'" class="absolute top-0 w-8 h-1 bg-blue-700 rounded-b-md"></div>
+        <button v-if="isAdmin" type="button" @click="activeTab = 'manage'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'manage'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+            <i class="fas fa-cog text-base"></i>
+            <span>จัดการ</span>
+            <div v-if="activeTab === 'manage'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
     </nav>
 
-    <!-- Modal ยืนยันการหยิบสินค้า -->
-    <transition name="fade">
-        <div v-if="pickModal.show" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
-            <div class="bg-white rounded-xl p-5 w-full max-w-[320px] shadow-2xl transform transition-all">
-                <div class="flex items-center justify-center w-12 h-12 rounded-full bg-orange-100 text-orange-500 mx-auto mb-3"><i class="fas fa-box-open text-xl"></i></div>
-                <h3 class="text-lg font-bold text-center text-gray-800 mb-1">ยืนยันการหยิบสินค้า</h3>
-                <p class="text-sm text-center text-gray-500 mb-4 line-clamp-2 px-2">{{ pickModal.item ? pickModal.item.productName : '' }}</p>
-                <div class="bg-gray-50 p-3 rounded-lg border mb-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-semibold text-gray-500">จำนวนที่ขอเบิก:</span>
-                        <span class="text-sm font-bold text-gray-700">{{ pickModal.item ? pickModal.item.qty : 0 }} {{ pickModal.item ? getProductUnit(pickModal.item.productId) : '' }}</span>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">จำนวนที่หยิบได้จริง <span class="text-orange-500">*</span></label>
-                        <input type="number" v-model.number="pickModal.actualQty" min="1" class="w-full border-gray-300 border p-2.5 rounded-lg text-lg font-bold text-center text-orange-600 focus:ring-2 focus:ring-orange-500 outline-none">
-                    </div>
-                </div>
-                <div class="flex gap-3">
-                    <button @click="pickModal.show = false" :disabled="isSubmitting" class="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg text-sm">ยกเลิก</button>
-                    <button @click="submitPick" :disabled="isSubmitting" class="flex-1 bg-orange-500 text-white font-bold py-2.5 rounded-lg text-sm flex justify-center items-center"><i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i>ยืนยัน</button>
-                </div>
-            </div>
-        </div>
-    </transition>
+    <!-- ==================== MODALS & OVERLAYS ==================== -->
 
-    <!-- Modal ปรับสต็อกมือ (Admin) -->
+    <!-- Quick Stepper Withdrawal Modal (1-Tap Fast Withdraw) -->
     <transition name="fade">
-        <div v-if="adjustModal.show" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
-            <div class="bg-white rounded-xl p-5 w-full max-w-[320px] shadow-2xl">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-calculator text-purple-500 mr-2"></i> ปรับแก้สต็อก (Admin)</h3>
-                <div class="mb-4">
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">สินค้า</label>
-                    <div class="p-2.5 bg-gray-100 rounded border text-sm text-gray-600 line-clamp-2">{{ adjustModal.name }}</div>
+        <div v-if="stepperModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-[55]">
+            <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+                <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto sm:hidden mb-2"></div>
+                <div class="border-b border-slate-100 pb-3">
+                    <span class="text-xs font-extrabold text-[#171c8f] uppercase tracking-wider">ระบุจำนวนที่ต้องการเบิก</span>
+                    <h3 class="text-base font-extrabold text-slate-900 mt-1 leading-snug">{{ stepperModal.product ? stepperModal.product.name : '' }}</h3>
+                    <div class="inline-flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 mt-2">
+                        <span>คงเหลือในระบบ:</span>
+                        <strong class="text-[#e35205]">{{ stepperModal.product ? stepperModal.product.stock : 0 }} {{ stepperModal.product ? (stepperModal.product.unit || 'ชิ้น') : '' }}</strong>
+                    </div>
                 </div>
-                <div class="flex items-center justify-between mb-4 px-2">
-                    <span class="text-sm font-semibold text-gray-600">สต็อกเดิม:</span>
-                    <span class="text-lg font-bold text-gray-400 line-through">{{ adjustModal.oldStock }} {{ adjustModal.unit }}</span>
+
+                <!-- Stepper Counter -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-bold text-slate-700">จำนวนเบิก ({{ stepperModal.product ? (stepperModal.product.unit || 'ชิ้น') : 'ชิ้น' }})</label>
+                    <div class="grid grid-cols-[52px_1fr_52px] gap-2 h-12">
+                        <button type="button" @click="stepperMinus" class="bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 text-[#171c8f] font-black text-xl border border-slate-300 rounded-xl flex items-center justify-center transition">−</button>
+                        <input type="number" v-model.number="stepperModal.qty" @input="updateModalCalculation" min="1" :max="stepperModal.product ? stepperModal.product.stock : 1" class="w-full text-center text-xl font-black text-slate-900 border border-slate-300 focus:border-[#171c8f] rounded-xl outline-none transition">
+                        <button type="button" @click="stepperPlus" class="bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 text-[#171c8f] font-black text-xl border border-slate-300 rounded-xl flex items-center justify-center transition">+</button>
+                    </div>
+
+                    <!-- Quick Increments -->
+                    <div class="grid grid-cols-4 gap-1.5 pt-1">
+                        <button type="button" @click="stepperAdd(1)" class="bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-[#171c8f] font-bold text-xs py-1.5 rounded-lg transition">+1</button>
+                        <button type="button" @click="stepperAdd(5)" class="bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-[#171c8f] font-bold text-xs py-1.5 rounded-lg transition">+5</button>
+                        <button type="button" @click="stepperAdd(10)" class="bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-[#171c8f] font-bold text-xs py-1.5 rounded-lg transition">+10</button>
+                        <button type="button" @click="stepperSetAll" class="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-1.5 rounded-lg transition">เบิกหมด</button>
+                    </div>
                 </div>
-                <div class="mb-6">
-                    <label class="block text-xs font-semibold text-purple-700 mb-1">แก้ไขตัวเลขสต็อกให้เป็น <span class="text-red-500">*</span></label>
-                    <input type="number" v-model.number="adjustModal.newStock" min="0" class="w-full border-gray-300 border p-3 rounded-lg text-xl font-bold text-center text-purple-700 focus:ring-2 focus:ring-purple-500 outline-none bg-purple-50">
+
+                <!-- Stock After Calculation -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs font-bold text-slate-700">
+                    <span>คงเหลือหลังเบิก:</span>
+                    <span :class="stepperRemainingStock <= 0 ? 'text-rose-600 font-black' : 'text-emerald-600 font-black'" class="text-sm">
+                        {{ stepperRemainingStock }} {{ stepperModal.product ? (stepperModal.product.unit || 'ชิ้น') : '' }}
+                    </span>
                 </div>
-                <div class="flex gap-3">
-                    <button @click="adjustModal.show = false" class="flex-1 bg-gray-100 text-gray-700 hover:bg-gray-200 font-bold py-2.5 rounded-lg transition text-sm">ยกเลิก</button>
-                    <button @click="saveAdjustStock" :disabled="isSubmitting" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2.5 rounded-lg transition text-sm flex justify-center items-center">
-                        <i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i> บันทึกยอด
+
+                <div class="grid grid-cols-2 gap-2 pt-1">
+                    <button type="button" @click="closeWithdrawStepper" :disabled="isSubmitting" class="bg-slate-100 text-slate-700 font-bold py-3 rounded-xl text-xs hover:bg-slate-200 transition">ยกเลิก</button>
+                    <button type="button" @click="confirmQuickWithdraw" :disabled="isSubmitting || stepperModal.qty <= 0" class="bg-[#171c8f] hover:bg-[#101466] text-white font-extrabold py-3 rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-1.5">
+                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
+                        <span>ยืนยันตัดสต็อก</span>
                     </button>
                 </div>
             </div>
         </div>
     </transition>
 
-    <!-- Global Error/Info Message Modal -->
+    <!-- Pick Modal (หยิบสินค้าจริง) -->
     <transition name="fade">
-        <div v-if="messageBox.show" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[60]">
-            <div class="bg-white rounded-xl p-5 w-full max-w-[300px] shadow-2xl transform transition-all text-center">
-                <div class="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3" :class="messageBox.isError ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-500'">
-                    <i class="fas fa-times text-2xl" :class="messageBox.isError ? 'fa-times' : 'fa-info'"></i>
+        <div v-if="pickModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3.5 text-center">
+                <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl">
+                    <i class="fas fa-box-open"></i>
                 </div>
-                <h3 class="text-lg font-bold text-gray-800 mb-2">{{ messageBox.title }}</h3>
-                <p class="text-sm text-gray-600 mb-5">{{ messageBox.message }}</p>
-                <button @click="messageBox.show = false" class="w-full font-bold py-2.5 rounded-lg transition text-sm" :class="messageBox.isError ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-blue-600 text-white hover:bg-blue-700'">ตกลง</button>
+                <h3 class="text-base font-extrabold text-slate-900">ยืนยันการหยิบสินค้า</h3>
+                <p class="text-xs text-slate-500 font-medium line-clamp-2 px-2">{{ pickModal.item ? pickModal.item.productName : '' }}</p>
+
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-left space-y-2">
+                    <div class="flex justify-between text-xs font-semibold text-slate-500">
+                        <span>จำนวนที่ขอเบิก:</span>
+                        <strong class="text-slate-800">{{ pickModal.item ? pickModal.item.qty : 0 }} {{ pickModal.item ? getProductUnit(pickModal.item.productId) : '' }}</strong>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">จำนวนที่หยิบได้จริง <span class="text-rose-500">*</span></label>
+                        <input type="number" v-model.number="pickModal.actualQty" min="1" class="w-full border border-slate-300 focus:border-amber-500 bg-white p-2 rounded-xl text-lg font-black text-center text-amber-600 outline-none">
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button @click="pickModal.show = false" :disabled="isSubmitting" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">ยกเลิก</button>
+                    <button @click="submitPick" :disabled="isSubmitting" class="flex-1 bg-[#e35205] hover:bg-[#c44300] text-white font-extrabold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5 shadow-md">
+                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
+                        <span>ยืนยัน</span>
+                    </button>
+                </div>
             </div>
         </div>
     </transition>
 
-    <!-- Universal Action Confirmation Modal -->
+    <!-- Adjust Stock Modal (Admin) -->
     <transition name="fade">
-        <div v-if="confirmDialog.show" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
-            <div class="bg-white rounded-xl p-5 w-full max-w-[320px] shadow-2xl transform transition-all">
-                <h3 class="text-lg font-bold text-gray-800 mb-2 flex items-center"><i class="mr-2" :class="confirmDialog.iconClass"></i> {{ confirmDialog.title }}</h3>
-                <p class="text-sm text-gray-600 mb-6 whitespace-pre-line">{{ confirmDialog.message }}</p>
-                <div class="flex gap-3">
-                    <button @click="confirmDialog.show = false" :disabled="isSubmitting" class="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg text-sm disabled:opacity-50">ยกเลิก</button>
-                    <button @click="executeConfirmDialog" :disabled="isSubmitting" class="flex-1 text-white font-bold py-2.5 rounded-lg text-sm flex justify-center items-center disabled:opacity-50" :class="confirmDialog.btnClass">
-                        <i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i> <span>ยืนยัน</span>
+        <div v-if="adjustModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-4">
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <i class="fas fa-calculator text-purple-600 text-lg"></i>
+                    <h3 class="text-sm font-extrabold text-slate-900">ปรับปรุงยอดสต็อกจริง</h3>
+                </div>
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500">ชื่อสินค้า</span>
+                    <p class="text-xs font-bold text-slate-800 line-clamp-2 mt-0.5">{{ adjustModal.name }}</p>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-2">
+                    <div class="flex justify-between text-xs font-semibold text-slate-500">
+                        <span>ยอดปัจจุบันในระบบ:</span>
+                        <strong class="text-slate-800">{{ adjustModal.oldStock }} {{ adjustModal.unit }}</strong>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-purple-900 mb-1">ยอดสต็อกที่ถูกต้องใหม่ <span class="text-rose-500">*</span></label>
+                        <input type="number" v-model.number="adjustModal.newStock" min="0" class="w-full border border-slate-300 focus:border-purple-600 p-2 rounded-xl text-lg font-black text-center text-purple-700 bg-white outline-none">
+                    </div>
+                </div>
+                <div class="flex gap-2">
+                    <button @click="adjustModal.show = false" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">ยกเลิก</button>
+                    <button @click="saveAdjustStock" :disabled="isSubmitting" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-extrabold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5 shadow-md">
+                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
+                        <span>บันทึก</span>
                     </button>
                 </div>
             </div>
@@ -762,20 +936,61 @@
 
     <!-- Edit Name Modal -->
     <transition name="fade">
-        <div v-if="editModal.show" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
-            <div class="bg-white rounded-xl p-5 w-full max-w-[320px] shadow-2xl">
-                <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center"><i class="fas fa-edit text-blue-500 mr-2"></i> แก้ไขชื่อสินค้า</h3>
-                <div class="mb-4">
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">ชื่อเดิม</label>
-                    <div class="p-2.5 bg-gray-100 rounded border text-sm text-gray-600 line-clamp-2">{{ editModal.oldName }}</div>
+        <div v-if="editModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-4">
+                <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                    <i class="fas fa-edit text-[#171c8f] text-lg"></i>
+                    <h3 class="text-sm font-extrabold text-slate-900">แก้ไขชื่อสินค้า</h3>
                 </div>
-                <div class="mb-6">
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">ชื่อใหม่ <span class="text-red-500">*</span></label>
-                    <input type="text" v-model="editModal.newName" @keyup.enter="saveEditProduct" class="w-full border-gray-300 border p-2.5 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500">ชื่อเดิม</span>
+                    <p class="text-xs text-slate-700 bg-slate-100 p-2 rounded-lg border border-slate-200 mt-0.5 line-clamp-2">{{ editModal.oldName }}</p>
                 </div>
-                <div class="flex gap-3">
-                    <button @click="editModal.show = false" class="flex-1 bg-gray-100 text-gray-700 font-bold py-2.5 rounded-lg text-sm">ยกเลิก</button>
-                    <button @click="saveEditProduct" :disabled="isSubmitting" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg text-sm"><i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i> บันทึก</button>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อใหม่ <span class="text-rose-500">*</span></label>
+                    <input type="text" v-model="editModal.newName" @keyup.enter="saveEditProduct" class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-xs outline-none font-medium">
+                </div>
+                <div class="flex gap-2">
+                    <button @click="editModal.show = false" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">ยกเลิก</button>
+                    <button @click="saveEditProduct" :disabled="isSubmitting" class="flex-1 bg-[#171c8f] hover:bg-[#101466] text-white font-extrabold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5 shadow-md">
+                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
+                        <span>บันทึก</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </transition>
+
+    <!-- General Message Box / Alert Modal -->
+    <transition name="fade">
+        <div v-if="messageBox.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[65]">
+            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3 text-center">
+                <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl" :class="messageBox.isError ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'">
+                    <i :class="messageBox.isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'"></i>
+                </div>
+                <h3 class="text-base font-extrabold text-slate-900">{{ messageBox.title }}</h3>
+                <p class="text-xs text-slate-600 whitespace-pre-line leading-relaxed">{{ messageBox.message }}</p>
+                <button @click="messageBox.show = false" class="w-full bg-slate-900 hover:bg-black text-white font-extrabold py-2.5 rounded-xl text-xs transition">
+                    ตกลง
+                </button>
+            </div>
+        </div>
+    </transition>
+
+    <!-- General Confirm Dialog -->
+    <transition name="fade">
+        <div v-if="confirmDialog.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[65]">
+            <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3.5">
+                <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                    <i :class="confirmDialog.iconClass"></i> {{ confirmDialog.title }}
+                </h3>
+                <p class="text-xs text-slate-600 whitespace-pre-line leading-relaxed">{{ confirmDialog.message }}</p>
+                <div class="flex gap-2">
+                    <button @click="confirmDialog.show = false" :disabled="isSubmitting" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">ยกเลิก</button>
+                    <button @click="executeConfirmDialog" :disabled="isSubmitting" class="flex-1 text-white font-extrabold py-2.5 rounded-xl text-xs flex justify-center items-center gap-1.5 shadow-md" :class="confirmDialog.btnClass">
+                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
+                        <span>ยืนยัน</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -783,42 +998,45 @@
 
     <!-- Transaction Confirmation Modal -->
     <transition name="fade">
-        <div v-if="showModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center p-4 z-[55] pb-20">
-            <div class="bg-white rounded-2xl p-6 w-full max-w-[320px] shadow-2xl transform transition-all">
-                <div class="text-center mb-4">
-                    <div :class="form.type === 'in' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'" class="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 shadow-inner">
-                        <i :class="form.type === 'in' ? 'fas fa-arrow-down' : 'fas fa-arrow-up'" class="text-3xl"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800">ยืนยันทำรายการทันที</h3>
+        <div v-if="showModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl text-center space-y-4">
+                <div :class="form.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'" class="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
+                    <i :class="form.type === 'in' ? 'fas fa-arrow-down' : 'fas fa-arrow-up'"></i>
                 </div>
-                <div class="bg-gray-50 p-4 rounded-xl mb-6 border border-gray-100 space-y-3">
-                    <div class="flex justify-between items-start border-b border-gray-200 pb-2">
-                        <span class="text-xs text-gray-500 mt-0.5">ประเภท:</span> 
-                        <span :class="form.type === 'in' ? 'text-green-600 bg-green-50 border-green-200' : 'text-red-600 bg-red-50 border-red-200'" class="font-bold text-sm px-2 py-0.5 rounded border">
-                            {{ form.type === 'in' ? 'รับเข้าคลัง (+)' : 'เบิกตัดสต็อก (-)' }}
+                <h3 class="text-base font-extrabold text-slate-900">ยืนยันทำรายการทันที</h3>
+                
+                <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-left space-y-2 text-xs">
+                    <div class="flex justify-between items-center pb-2 border-b border-slate-200">
+                        <span class="text-slate-500 font-semibold">ประเภท:</span>
+                        <span :class="form.type === 'in' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-rose-700 bg-rose-50 border-rose-200'" class="font-extrabold px-2 py-0.5 rounded border">
+                            {{ form.type === 'in' ? 'รับเข้า (+)' : 'เบิกออก (-)' }}
                         </span>
                     </div>
                     <div>
-                        <span class="text-xs text-gray-500 block mb-1">สินค้า:</span> 
-                        <span class="font-bold text-gray-800 text-sm leading-tight block">{{ getSelectedProductName() }}</span>
+                        <span class="text-slate-500 font-semibold block mb-0.5">สินค้า:</span>
+                        <span class="font-bold text-slate-800 line-clamp-2">{{ getSelectedProductName() }}</span>
                     </div>
-                    <div class="flex justify-between items-end border-b border-gray-200 pb-2 pt-1">
-                        <span class="text-xs text-gray-500">จำนวน:</span> 
-                        <span class="font-bold text-xl text-blue-700">{{ form.qty }} <span class="text-sm font-normal text-gray-600">{{ getSelectedProductUnit() }}</span></span>
+                    <div class="flex justify-between items-center pt-1 border-t border-slate-200">
+                        <span class="text-slate-500 font-semibold">จำนวน:</span>
+                        <span class="font-extrabold text-base text-[#171c8f]">{{ form.qty }} <span class="text-xs font-normal text-slate-600">{{ getSelectedProductUnit() }}</span></span>
                     </div>
                 </div>
-                <div class="flex gap-3">
-                    <button @click="showModal = false" :disabled="isSubmitting" class="flex-1 bg-white border border-gray-300 text-gray-700 font-bold py-3 rounded-xl text-sm">แก้ไข</button>
-                    <button @click="confirmTransaction" :disabled="isSubmitting" class="flex-1 bg-blue-600 text-white shadow-md font-bold py-3 rounded-xl text-sm"><i v-if="isSubmitting" class="fas fa-spinner fa-spin mr-2"></i>ยืนยัน</button>
+
+                <div class="flex gap-2">
+                    <button @click="showModal = false" :disabled="isSubmitting" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">แก้ไข</button>
+                    <button @click="confirmTransaction" :disabled="isSubmitting" class="flex-1 bg-[#171c8f] hover:bg-[#101466] text-white font-extrabold py-2.5 rounded-xl text-xs shadow-md flex justify-center items-center gap-1.5">
+                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
+                        <span>ยืนยัน</span>
+                    </button>
                 </div>
             </div>
         </div>
     </transition>
-    
+
     <!-- Toast Notification -->
     <transition name="fade">
-        <div v-if="showToast" class="fixed top-10 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-[70] text-sm font-semibold flex items-center whitespace-nowrap">
-            <i class="fas fa-check-circle text-green-400 mr-2 text-lg"></i> {{ toastMessage }}
+        <div v-if="showToast" class="fixed top-12 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white px-5 py-2.5 rounded-full shadow-2xl z-[70] text-xs font-bold flex items-center gap-2 whitespace-nowrap">
+            <i class="fas fa-check-circle text-emerald-400 text-sm"></i> <span>{{ toastMessage }}</span>
         </div>
     </transition>
 
@@ -835,13 +1053,23 @@
         data() {
             return {
                 loggedInUser: currentUser || 'Guest',
-                isAdmin: false, 
-                activeTab: 'transaction', // 🌟 ตั้งค่าเริ่มต้นให้เปิดหน้าเบิกรับก่อน
-                products: [], 
+                isAdmin: false,
+                activeTab: 'transaction',
+                txViewMode: 'catalog',
+                products: [],
                 history: [],
-                pickList: [], 
+                pickList: [],
                 form: { type: 'out', productId: '', qty: null, user: currentUser || '' },
                 newProductName: '', newProductUnit: 'ชิ้น', searchDashboard: '', searchTransaction: '', searchManage: '', searchTransactionList: '',
+                selectedCategory: 'all',
+                categoryList: [
+                    { id: 'all', name: 'ทั้งหมด' },
+                    { id: 'packaging', name: 'บรรจุภัณฑ์' },
+                    { id: 'ppe', name: 'อุปกรณ์ PPE' },
+                    { id: 'tape', name: 'เทป & วัสดุรัด' },
+                    { id: 'label', name: 'ป้าย & เอกสาร' },
+                    { id: 'raw', name: 'วัตถุดิบ & อื่นๆ' }
+                ],
                 showDropdown: false, showModal: false, showToast: false, toastMessage: '',
                 masterSearchResults: [], isSearchingMaster: false, showMasterDropdown: false, masterSearchDebounceTimer: null,
                 isLoading: false, isSilentLoading: false, isSubmitting: false, isOnline: WEB_APP_URL.trim() !== '',
@@ -850,9 +1078,9 @@
                 confirmDialog: { show: false, title: '', message: '', iconClass: '', btnClass: '', action: null, payload: null },
                 editModal: { show: false, id: null, oldName: '', newName: '' },
                 pickModal: { show: false, item: null, actualQty: 0 },
-                
-                // 🌟 Modal ใหม่สำหรับปรับสต็อก
                 adjustModal: { show: false, id: null, name: '', oldStock: 0, newStock: 0, unit: '' },
+                
+                stepperModal: { show: false, product: null, qty: 1 },
                 
                 refreshInterval: null
             }
@@ -861,13 +1089,16 @@
             reversedHistory() { return [...this.history].reverse(); },
             totalItemsInStock() { return this.products.reduce((sum, p) => sum + p.stock, 0); },
             sortedProducts() { return [...this.products].sort((a, b) => b.stock - a.stock || a.name.localeCompare(b.name, 'th')); },
-            filteredSortedProducts() {
-                if (!this.searchDashboard) return this.sortedProducts;
-                return this.sortedProducts.filter(p => p.name.toLowerCase().includes(this.searchDashboard.toLowerCase()));
-            },
-            filteredTransactionListProducts() {
-                if (!this.searchTransactionList) return this.sortedProducts;
-                return this.sortedProducts.filter(p => p.name.toLowerCase().includes(this.searchTransactionList.toLowerCase()));
+            filteredCatalogProducts() {
+                let list = this.sortedProducts;
+                if (this.selectedCategory !== 'all') {
+                    list = list.filter(p => this.getProductCategory(p) === this.selectedCategory);
+                }
+                if (this.searchTransactionList.trim()) {
+                    const q = this.searchTransactionList.toLowerCase().trim();
+                    list = list.filter(p => p.name.toLowerCase().includes(q) || String(p.id).toLowerCase().includes(q));
+                }
+                return list;
             },
             filteredTransactionProducts() {
                 if (!this.searchTransaction) return this.products;
@@ -877,25 +1108,26 @@
                 if (!this.searchManage) return this.products;
                 return this.products.filter(p => p.name.toLowerCase().includes(this.searchManage.toLowerCase()));
             },
-            // 🌟 คำนวณสินค้าใกล้หมด (ต่ำกว่า 20)
             lowStockItems() {
                 return this.products.filter(p => p.stock < 20);
             },
-            // 🌟 นับจำนวนรายการเคลื่อนไหวเฉพาะวันนี้
             todayHistoryCount() {
                 const todayStr = this.getTodayStr();
                 return this.history.filter(h => {
                     const hDate = h.time ? this.formatDisplayDate(h.date) : this.formatDate(h.date).split(' - ')[0];
                     return hDate === todayStr;
                 }).length;
+            },
+            stepperRemainingStock() {
+                if (!this.stepperModal.product) return 0;
+                const qty = parseInt(this.stepperModal.qty, 10) || 0;
+                return Math.max(0, this.stepperModal.product.stock - qty);
             }
         },
         watch: {
             activeTab(newTab) {
                 this.searchDashboard = ''; this.searchTransaction = ''; this.searchManage = ''; this.searchTransactionList = '';
-                this.showDropdown = false; this.form.productId = ''; this.form.qty = null; this.form.type = 'out'; 
-                
-                // ถ้าย้ายมาหน้า Dashboard ให้ดึงข้อมูลล่าสุดเลยทันที (เพื่อ Real-time แบบไม่โหลดหมุนจอ)
+                this.showDropdown = false; this.form.productId = ''; this.form.qty = null; this.form.type = 'out';
                 if(newTab === 'dashboard') {
                     this.loadData(true);
                 }
@@ -908,7 +1140,6 @@
             const hasAccess = await verifyAccess();
             if (!hasAccess) return;
 
-            // verifyAccess() resolves after data() snapshot ตั้งค่าเริ่มต้นไว้ → sync ค่าผู้ใช้กลับเข้า reactive state
             this.loggedInUser = currentUser || 'Guest';
             this.form.user = currentUser || '';
 
@@ -920,10 +1151,9 @@
             }
             this.loadData();
             
-            // 🌟 ตั้งเวลา Auto-Refresh ดึงข้อมูลทุก 30 วินาทีแบบเงียบๆ (Real-time Feel)
             this.refreshInterval = setInterval(() => {
                 if(this.activeTab === 'dashboard' || this.activeTab === 'picklist') {
-                    this.loadData(true); // true = silent (ไม่ขึ้นไอคอนหมุนบังจอ)
+                    this.loadData(true);
                 }
             }, 30000);
         },
@@ -931,7 +1161,27 @@
             if(this.refreshInterval) clearInterval(this.refreshInterval);
         },
         methods: {
-            // Helpers
+            getProductCategory(p) {
+                if (p.category) {
+                    const c = String(p.category).toLowerCase();
+                    if (c.includes('pack') || c.includes('กล่อง') || c.includes('ถุง') || c.includes('พลาสติก')) return 'packaging';
+                    if (c.includes('ppe') || c.includes('ถุงมือ') || c.includes('หน้ากาก')) return 'ppe';
+                    if (c.includes('tape') || c.includes('เทป') || c.includes('สายรัด')) return 'tape';
+                    if (c.includes('label') || c.includes('ป้าย') || c.includes('สติกเกอร์') || c.includes('เอกสาร')) return 'label';
+                    return c;
+                }
+                const name = (p.name || '').toLowerCase();
+                if (name.includes('ถุงมือ') || name.includes('หน้ากาก') || name.includes('หมวก') || name.includes('เอี๊ยม')) return 'ppe';
+                if (name.includes('กล่อง') || name.includes('ถุง') || name.includes('พลาสติกพัน') || name.includes('บับเบิ้ล') || name.includes('กระสอบ')) return 'packaging';
+                if (name.includes('เทป') || name.includes('สายรัด') || name.includes('opp')) return 'tape';
+                if (name.includes('ป้าย') || name.includes('สติกเกอร์') || name.includes('กระดาษ') || name.includes('บิล') || name.includes('ฟอร์ม')) return 'label';
+                return 'raw';
+            },
+            getProductCategoryName(p) {
+                const cat = this.getProductCategory(p);
+                const match = this.categoryList.find(c => c.id === cat);
+                return match ? match.name : 'ทั่วไป';
+            },
             getTodayStr() {
                 return new Date().toLocaleDateString('en-GB', { timeZone: 'Asia/Bangkok', day: '2-digit', month: '2-digit', year: '2-digit' });
             },
@@ -961,8 +1211,80 @@
             handleSearchInput() { this.showDropdown = true; this.form.productId = ''; },
             selectTransactionProduct(product) { this.form.productId = product.id; this.searchTransaction = product.name; this.showDropdown = false; },
             clearSelection() { this.form.productId = ''; this.searchTransaction = ''; this.showDropdown = true; },
-            quickWithdraw(product) { this.activeTab = 'transaction'; setTimeout(() => { this.form.type = 'out'; this.form.productId = product.id; this.searchTransaction = product.name; window.scrollTo({ top: 0, behavior: 'smooth' }); }, 50); },
+            quickWithdraw(product) { this.openWithdrawStepper(product); },
             
+            // -------- 1-Tap Quick Withdrawal Stepper Modal --------
+            openWithdrawStepper(product) {
+                if (!product || product.stock <= 0) return;
+                this.stepperModal = {
+                    show: true,
+                    product: product,
+                    qty: 1
+                };
+            },
+            closeWithdrawStepper() {
+                this.stepperModal.show = false;
+                this.stepperModal.product = null;
+            },
+            updateModalCalculation() {
+                if (!this.stepperModal.product) return;
+                let q = parseInt(this.stepperModal.qty, 10);
+                if (isNaN(q) || q < 1) q = 1;
+                if (q > this.stepperModal.product.stock) q = this.stepperModal.product.stock;
+                this.stepperModal.qty = q;
+            },
+            stepperMinus() {
+                if (this.stepperModal.qty > 1) {
+                    this.stepperModal.qty -= 1;
+                }
+            },
+            stepperPlus() {
+                if (this.stepperModal.product && this.stepperModal.qty < this.stepperModal.product.stock) {
+                    this.stepperModal.qty += 1;
+                }
+            },
+            stepperAdd(amount) {
+                if (!this.stepperModal.product) return;
+                const max = this.stepperModal.product.stock;
+                this.stepperModal.qty = Math.min((this.stepperModal.qty || 0) + amount, max);
+            },
+            stepperSetAll() {
+                if (!this.stepperModal.product) return;
+                this.stepperModal.qty = this.stepperModal.product.stock;
+            },
+            async confirmQuickWithdraw() {
+                if (!this.stepperModal.product) return;
+                const prod = this.stepperModal.product;
+                const qty = parseInt(this.stepperModal.qty, 10);
+                if (qty <= 0 || qty > prod.stock) {
+                    this.showAlert('ข้อมูลไม่ถูกต้อง', 'จำนวนเบิกไม่ถูกต้อง');
+                    return;
+                }
+                this.isSubmitting = true;
+                const uiDate = this.getTodayStr();
+                const uiTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                const userName = this.loggedInUser || 'Operator';
+
+                const success = await this.apiCall({
+                    action: 'transaction',
+                    productId: prod.id,
+                    productName: prod.name,
+                    type: 'out',
+                    qty: qty,
+                    user: userName
+                });
+
+                if (success) {
+                    prod.stock -= qty;
+                    this.history.push({ date: uiDate, time: uiTime, type: 'out', productName: prod.name, qty: qty, user: userName });
+                    localStorage.removeItem('AKRA_WMS_DATA');
+                    if (window.sendAppLog) window.sendAppLog('เบิกด่วน W5', `${prod.name} จำนวน ${qty} ${prod.unit || 'ชิ้น'}`);
+                    this.triggerToast(`เบิก ${prod.name} จำนวน ${qty} สำเร็จ`);
+                    this.closeWithdrawStepper();
+                }
+                this.isSubmitting = false;
+            },
+
             async loadData(silent = false) {
                 if (!this.isOnline) return;
                 this.isSilentLoading = silent;
@@ -987,7 +1309,26 @@
                     if (data.history) this.history = data.history;
                     if (data.pickList) this.pickList = data.pickList;
                 } catch (error) {
-                    if (!silent && !cached) this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
+                    if (window.isPreviewEnv && this.products.length === 0) {
+                        this.products = [
+                            { id: "W5-0147", name: "กล่องกระดาษลูกฟูก 3 ชั้น 45 × 60 ซม.", stock: 128, unit: "ใบ", category: "packaging" },
+                            { id: "W5-0204", name: "ถุงมือยางไนไตร สีฟ้า Size M", stock: 18, unit: "กล่อง", category: "ppe" },
+                            { id: "W5-0088", name: "เทปกาว OPP ใส 48 มม. × 100 หลา", stock: 64, unit: "ม้วน", category: "tape" },
+                            { id: "W5-0310", name: "พลาสติกพันพาเลท 50 ซม. × 300 ม.", stock: 9, unit: "ม้วน", category: "packaging" },
+                            { id: "W5-0042", name: "สายรัดพลาสติก PP 12 มม. สีขาว", stock: 36, unit: "ม้วน", category: "tape" },
+                            { id: "W5-0261", name: "ป้ายระบุสินค้า คลัง W5 ขนาด A6", stock: 0, unit: "แพ็ก", category: "label" }
+                        ];
+                        this.history = [
+                            { date: this.getTodayStr(), time: "15:20:00", type: "out", productName: "เทปกาว OPP ใส 48 มม. × 100 หลา", qty: 5, user: "อัครพล" },
+                            { date: this.getTodayStr(), time: "14:15:00", type: "out", productName: "กล่องกระดาษลูกฟูก 3 ชั้น 45 × 60 ซม.", qty: 20, user: "สมชาย" }
+                        ];
+                        this.pickList = [
+                            { pickId: "1", productId: "W5-0204", productName: "ถุงมือยางไนไตร สีฟ้า Size M", qty: 4, requestedBy: "กิตติพงษ์", timeStr: this.getTodayStr() + " 10:30" },
+                            { pickId: "2", productId: "W5-0088", productName: "เทปกาว OPP ใส 48 มม. × 100 หลา", qty: 12, requestedBy: "นภัสสร", timeStr: this.getTodayStr() + " 11:15" }
+                        ];
+                    } else if (!silent && !cached) {
+                        this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
+                    }
                 } finally {
                     this.isLoading = false;
                     this.isSilentLoading = false;
@@ -1034,7 +1375,7 @@
                 }
             },
 
-            // -------- รายการด่วน --------
+            // -------- Form Transactions --------
             verifyTransaction() {
                 if (this.isSubmitting) return;
                 if (!this.form.productId) { this.showAlert('ข้อมูลไม่ครบ', 'กรุณาเลือกสินค้าจากรายการ'); return; }
@@ -1067,7 +1408,9 @@
                     localStorage.removeItem('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog(`ทำรายการ${this.form.type === 'in' ? 'รับเข้า' : 'เบิกออก'} W5`, `${product.name} จำนวน ${qty} ${product.unit || 'ชิ้น'}`);
                     this.form.productId = ''; this.form.qty = null; this.searchTransaction = ''; this.showModal = false;
-                    this.triggerToast('บันทึกรายการสำเร็จแล้ว'); this.activeTab = 'dashboard'; window.scrollTo(0, 0);
+                    this.triggerToast('บันทึกรายการสำเร็จแล้ว');
+                    this.activeTab = 'dashboard';
+                    window.scrollTo(0, 0);
                 }
                 this.isSubmitting = false;
             },
@@ -1079,7 +1422,7 @@
                 const product = this.products.find(p => p.id === this.form.productId);
                 if (!product) { this.showAlert('ข้อผิดพลาด', 'ไม่พบสินค้านี้ในระบบ กรุณาเลือกสินค้าใหม่อีกครั้ง'); return; }
                 if (product.stock < this.form.qty) {
-                    this.showConfirmUI('แจ้งเตือน: สต็อกอาจไม่พอ', `สินค้า ${product.name} มีคงเหลือ ${product.stock} ${product.unit || 'ชิ้น'}\nซึ่งน้อยกว่าที่คุณกำลังสั่งเบิก\n\nต้องการเพิ่มลงใบจัดต่อไปหรือไม่?`, 'bg-orange-500 hover:bg-orange-600', 'fas fa-exclamation-circle text-orange-500', this.processAddPickList, product);
+                    this.showConfirmUI('แจ้งเตือน: สต็อกอาจไม่พอ', `สินค้า ${product.name} มีคงเหลือ ${product.stock} ${product.unit || 'ชิ้น'}\nซึ่งน้อยกว่าที่คุณกำลังสั่งเบิก\n\nต้องการเพิ่มลงใบจัดต่อไปหรือไม่?`, 'bg-amber-500 hover:bg-amber-600', 'fas fa-exclamation-circle text-amber-500', this.processAddPickList, product);
                 } else { this.processAddPickList(product); }
             },
             async processAddPickList(product) {
@@ -1117,15 +1460,15 @@
                 }
                 this.isSubmitting = false;
             },
-            confirmRemovePickList(item) { this.showConfirmUI('ยืนยันลบใบจัด', `ต้องการลบรายการขอเบิกสินค้านี้ใช่หรือไม่?\n\n"${item.productName}"\nจำนวน ${item.qty} ${this.getProductUnitByName(item.productName)}`, 'bg-red-600 hover:bg-red-700', 'fas fa-trash text-red-500', this.processRemovePickList, item); },
+            confirmRemovePickList(item) { this.showConfirmUI('ยืนยันลบใบจัด', `ต้องการลบรายการขอเบิกสินค้านี้ใช่หรือไม่?\n\n"${item.productName}"\nจำนวน ${item.qty} ${this.getProductUnitByName(item.productName)}`, 'bg-rose-600 hover:bg-rose-700', 'fas fa-trash text-rose-500', this.processRemovePickList, item); },
             async processRemovePickList(item) {
                 this.isSubmitting = true; const success = await this.apiCall({ action: 'removePickList', pickId: item.pickId });
                 if(success) { this.pickList = this.pickList.filter(p => p.pickId !== item.pickId); localStorage.removeItem('AKRA_WMS_DATA'); if (window.sendAppLog) window.sendAppLog('ยกเลิกใบจัด W5', `ยกเลิกการรอเบิก ${item.productName}`); this.triggerToast('ลบรายการใบจัดสำเร็จ'); }
                 this.isSubmitting = false;
             },
 
-            // -------- จัดการอื่นๆ --------
-            confirmUndo(log) { this.showConfirmUI('ยืนยันการยกเลิกรายการ', `ต้องการยกเลิกรายการนี้ใช่หรือไม่?\n\n"${log.type === 'in' ? 'รับเข้า' : 'เบิกออก'} ${log.productName} \nจำนวน ${log.qty} ${this.getProductUnitByName(log.productName)}"\n\n(ระบบจะทำการปรับคืนยอดสต็อกให้อัตโนมัติ)`, 'bg-red-600 hover:bg-red-700', 'fas fa-exclamation-triangle text-red-500', this.processUndo, log); },
+            // -------- Undo / Reverse --------
+            confirmUndo(log) { this.showConfirmUI('ยืนยันการยกเลิกรายการ', `ต้องการยกเลิกรายการนี้ใช่หรือไม่?\n\n"${log.type === 'in' ? 'รับเข้า' : 'เบิกออก'} ${log.productName} \nจำนวน ${log.qty} ${this.getProductUnitByName(log.productName)}"\n\n(ระบบจะทำการปรับคืนยอดสต็อกให้อัตโนมัติ)`, 'bg-rose-600 hover:bg-rose-700', 'fas fa-exclamation-triangle text-rose-500', this.processUndo, log); },
             async processUndo(log) {
                 this.isSubmitting = true; const product = this.products.find(p => p.name === log.productName.replace(' [ยกเลิก]', ''));
                 if (!product) { this.showAlert('ข้อผิดพลาด', 'ไม่พบข้อมูลสินค้านี้ในระบบแล้ว', true); this.isSubmitting = false; return; }
@@ -1143,7 +1486,7 @@
             getSelectedProductName() { return this.form.productId ? (this.products.find(p => p.id === this.form.productId) || {}).name || '' : ''; },
             getSelectedProductUnit() { const p = this.products.find(p => p.id === this.form.productId); return p ? (p.unit || 'ชิ้น') : 'ชิ้น'; },
             
-            // --- 🌟 ปรับแก้สต็อก (Admin) ---
+            // --- ปรับแก้สต็อก (Admin) ---
             openAdjustModal(product) {
                 this.adjustModal = { show: true, id: product.id, name: product.name, oldStock: product.stock, newStock: product.stock, unit: product.unit || 'ชิ้น' };
             },
@@ -1257,7 +1600,7 @@
                 }
                 this.isSubmitting = false;
             },
-            confirmDelete(product) { this.showConfirmUI('ยืนยันลบสินค้า', `ลบ "${product.name}"?`, 'bg-red-600 hover:bg-red-700', 'fas fa-trash-alt text-red-500', this.processDelete, product.id); },
+            confirmDelete(product) { this.showConfirmUI('ยืนยันลบสินค้า', `ลบ "${product.name}"?`, 'bg-rose-600 hover:bg-rose-700', 'fas fa-trash-alt text-rose-500', this.processDelete, product.id); },
             async processDelete(id) {
                 this.isSubmitting = true;
                 const productToDelete = this.products.find(p => p.id === id);
