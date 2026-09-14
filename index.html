@@ -122,7 +122,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260914.03";
+    var CURRENT_VERSION = "20260914.04";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -1141,7 +1141,9 @@
                 
                 stepperModal: { show: false, product: null, qty: 1 },
                 
-                refreshInterval: null
+                refreshInterval: null,
+                dataLoadPromise: null, dataLoadToken: null, dataLoadRevision: 0,
+                dataRevision: 0, dataMutationPending: false, lastDataLoadedAt: 0, visibilityHandler: null
             }
         },
         computed: {
@@ -1211,14 +1213,14 @@
             this.loadCustomTags();
             this.loadData();
             
-            this.refreshInterval = setInterval(() => {
-                if(this.activeTab === 'dashboard' || this.activeTab === 'picklist') {
-                    this.loadData(true);
-                }
-            }, 30000);
+            this.refreshInterval = setInterval(() => this.refreshVisibleData(), 30000);
+            this.visibilityHandler = () => this.refreshVisibleData();
+            document.addEventListener('visibilitychange', this.visibilityHandler);
         },
         unmounted() {
             if(this.refreshInterval) clearInterval(this.refreshInterval);
+            if(this.visibilityHandler) document.removeEventListener('visibilitychange', this.visibilityHandler);
+            this.dataRevision++;
         },
         methods: {
             loadCustomTags() {
@@ -1437,7 +1439,24 @@
                 this.isSubmitting = false;
             },
 
-            async loadData(silent = false) {
+            refreshVisibleData() {
+                if (document.hidden || this.dataMutationPending) return;
+                if (this.activeTab !== 'dashboard' && this.activeTab !== 'picklist') return;
+                if (Date.now() - this.lastDataLoadedAt >= 30000) return this.loadData(true);
+            },
+            loadData(silent = false) {
+                if (!this.isOnline || this.dataMutationPending) return Promise.resolve();
+                const token = sessionToken;
+                const revision = this.dataRevision;
+                if (this.dataLoadPromise && this.dataLoadToken === token && this.dataLoadRevision === revision) return this.dataLoadPromise;
+                this.dataLoadToken = token;
+                this.dataLoadRevision = revision;
+                const pending = this.fetchDataSnapshot(silent, token, revision);
+                this.dataLoadPromise = pending;
+                pending.finally(() => { if (this.dataLoadPromise === pending) this.dataLoadPromise = null; });
+                return pending;
+            },
+            async fetchDataSnapshot(silent, token, revision) {
                 if (!this.isOnline) return;
                 this.isSilentLoading = silent;
                 const cached = getCache('AKRA_WMS_DATA', AKRA_CACHE_TTL);
@@ -1449,11 +1468,14 @@
                     this.isLoading = true;
                 }
                 try {
-                    const tokenParam = sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : '';
+                    const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
                     const response = await fetch(`${WEB_APP_URL}?action=getData${tokenParam}`, {
-                        headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                     });
                     const data = await response.json();
+                    if (token !== sessionToken || revision !== this.dataRevision) return;
+                    if (!response.ok || data.success === false) throw new Error(data.error || 'load_failed');
+                    this.lastDataLoadedAt = Date.now();
                     if (data.products) {
                         this.products = data.products.sort((a,b) => a.name.localeCompare(b.name, 'th'));
                         setCache('AKRA_WMS_DATA', data);
@@ -1461,6 +1483,7 @@
                     if (data.history) this.history = data.history;
                     if (data.pickList) this.pickList = data.pickList;
                 } catch (error) {
+                    if (token !== sessionToken || revision !== this.dataRevision) return;
                     if (window.isPreviewEnv && this.products.length === 0) {
                         this.products = [
                             { id: 1, name: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", stock: 24, unit: "ลัง", category: "chilled" },
@@ -1485,14 +1508,18 @@
                         this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
                     }
                 } finally {
-                    this.isLoading = false;
-                    this.isSilentLoading = false;
+                    if (token === sessionToken && revision === this.dataRevision) {
+                        this.isLoading = false;
+                        this.isSilentLoading = false;
+                    }
                 }
             },
             async apiCall(payload) {
                 if (await AppVersionGuard.blockIfStale(payload && payload.action)) return false;
                 if (!this.isOnline) return true;
                 this.isLoading = true; this.isSilentLoading = false;
+                this.dataRevision++;
+                this.dataMutationPending = true;
                 try {
                     const bodyPayload = { ...payload, token: sessionToken };
                     const response = await fetch(WEB_APP_URL, {
@@ -1526,6 +1553,9 @@
                     this.showAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', true);
                     return false;
                 } finally {
+                    this.dataMutationPending = false;
+                    this.dataRevision++;
+                    this.lastDataLoadedAt = 0;
                     this.isLoading = false;
                 }
             },
