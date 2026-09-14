@@ -25,7 +25,7 @@ console.log('\n[2/5] Checking version parity...');
 const versionMatch = indexSource.match(/(?:const|var|let)\s+CURRENT_VERSION\s*=\s*["']([^"']+)["']/);
 assert.ok(versionMatch, 'CURRENT_VERSION constant must be defined');
 assert.strictEqual(versionMatch[1], versionJson.version, 'Version mismatch');
-assert.strictEqual(versionMatch[1], '20260831.03', 'Target version must be 20260831.03');
+assert.strictEqual(versionMatch[1], '20260914.02', 'Target version must be 20260914.02');
 console.log(`  ✓ Version verified: ${versionMatch[1]}`);
 
 // Sandbox setup
@@ -146,7 +146,7 @@ async function runWorkflowTests() {
   const { context, storage, getVueConfig } = createSandbox({
     fetch: async (url, options) => {
       if (url.includes('version.json')) {
-        return { ok: true, status: 200, json: async () => ({ version: '20260831.03' }) };
+        return { ok: true, status: 200, json: async () => ({ version: '20260914.02' }) };
       }
       const body = options && options.body ? JSON.parse(options.body) : {};
       capturedCalls.push({ url, options, body });

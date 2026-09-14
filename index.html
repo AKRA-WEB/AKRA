@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
         
         :root {
             --ci-blue: #171c8f;
@@ -38,7 +38,7 @@
         * { box-sizing: border-box; }
 
         body {
-            font-family: 'Sarabun', sans-serif;
+            font-family: 'Inter', 'Noto Sans Thai', system-ui, sans-serif;
             background-color: var(--slate-50);
             color: var(--slate-900);
             min-height: 100vh;
@@ -78,14 +78,44 @@
             scrollbar-width: none;
         }
         .category-scroll::-webkit-scrollbar { display: none; }
+
+        /* W5 production candidate: share the approved GR/PO shell geometry while
+           leaving the incumbent Vue workflow and component handlers intact. */
+        html { background: #fff; }
+        body { font-family: 'Inter', 'Noto Sans Thai', system-ui, sans-serif; background: #fff; }
+        .w5-app { width: 100%; max-width: none; margin: 0; border: 0; box-shadow: none; background: #fff; }
+        .w5-topbar { min-height: 72px; padding: 0; background: #111827; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+        .w5-topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(1440px, calc(100% - 44px)); min-height: 72px; margin: 0 auto; }
+        .w5-topbar .w5-brand-icon { width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 5px 14px rgba(200, 79, 32, .18); }
+        .w5-topbar h1 { font-family: 'Inter', 'Noto Sans Thai', system-ui, sans-serif; font-size: 16px; letter-spacing: -.025em; }
+        .w5-operator { min-height: 36px; }
+        .w5-main { width: min(1440px, calc(100% - 44px)); margin: 0 auto; padding: 24px 0 104px; background: #fff; }
+        .w5-mode-switcher { border: 1px solid #e2e8f0; background: #f8fafc; }
+        .w5-filter-surface { border-color: #e2e8f0; border-radius: 14px; }
+        .w5-catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+        .w5-product-card { min-height: 178px; padding: 16px; border-radius: 15px; flex-direction: column; align-items: stretch; justify-content: space-between; }
+        .w5-product-card .w5-product-copy { min-height: 66px; }
+        .w5-product-card .w5-product-actions { justify-content: space-between; }
+        .w5-bottom-nav { max-width: none; box-shadow: 0 -10px 24px rgba(25, 35, 48, .09); }
+
+        @media (max-width: 640px) {
+            .w5-topbar-inner { width: calc(100% - 24px); min-height: 64px; gap: 10px; }
+            .w5-topbar { min-height: 64px; }
+            .w5-topbar .w5-brand-icon { width: 34px; height: 34px; border-radius: 9px; font-size: 13px; }
+            .w5-topbar h1 { font-size: 14px; }
+            .w5-operator { min-height: 34px; padding-inline: 9px; font-size: 11px; }
+            .w5-main { width: calc(100% - 24px); padding: 16px 0 96px; }
+            .w5-catalog-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+            .w5-product-card { min-height: 0; padding: 14px; }
+        }
     </style>
 </head>
-<body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900">
+<body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900 bg-white">
 
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260831.03";
+    var CURRENT_VERSION = "20260914.02";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -372,7 +402,7 @@
 </script>
 <!-- ========================================================== -->
 
-<div id="app" class="min-h-screen bg-slate-50 flex flex-col justify-between w-full max-w-lg mx-auto shadow-xl border-x border-slate-200 overflow-x-hidden">
+<div id="app" class="w5-app min-h-screen flex flex-col justify-between overflow-x-hidden">
 
     <!-- Offline Banner -->
     <div v-if="!isOnline" class="bg-amber-100 text-amber-900 text-xs px-4 py-2 text-center font-bold border-b border-amber-200 flex items-center justify-center gap-2">
@@ -389,30 +419,32 @@
     </div>
 
     <!-- Header Topbar (Matching Portfolio CI) -->
-    <header class="sticky top-0 z-40 bg-[#171c8f] text-white px-4 py-3 shadow-md flex justify-between items-center">
-        <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 bg-[#e35205] text-white font-black text-sm rounded-xl flex items-center justify-center shadow-md">
+    <header class="w5-topbar sticky top-0 z-40 text-white">
+        <div class="w5-topbar-inner">
+            <div class="flex items-center gap-2.5">
+            <div class="w5-brand-icon bg-[#e35205] text-white font-black text-sm rounded-xl flex items-center justify-center">
                 W5
             </div>
             <div>
                 <h1 class="text-base font-extrabold leading-tight tracking-tight">คลังสินค้า W5</h1>
                 <p class="text-[11px] text-indigo-200">เช็กสต็อก & เบิกจ่ายทันที</p>
             </div>
-        </div>
-        <div class="bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
+            </div>
+            <div class="w5-operator bg-white/10 border border-white/20 px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 backdrop-blur-sm">
             <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
             <span class="max-w-[100px] truncate text-slate-100">{{ loggedInUser }}</span>
+            </div>
         </div>
     </header>
 
     <!-- Main Content Area -->
-    <main class="flex-1 p-3 sm:p-4 pb-safe min-w-0 w-full">
+    <main class="w5-main flex-1 pb-safe min-w-0">
 
         <!-- ==================== TAB 1: TRANSACTION (เบิก-รับ แคตตาล็อก) ==================== -->
         <section v-show="activeTab === 'transaction'" class="space-y-3.5 min-w-0 w-full">
             
             <!-- Quick Mode Switcher (List-First vs Manual Form) -->
-            <div class="flex bg-slate-200/80 p-1 rounded-xl gap-1 shadow-inner text-xs font-bold w-full">
+            <div class="w5-mode-switcher flex p-1 rounded-xl gap-1 shadow-inner text-xs font-bold w-full">
                 <button type="button" @click="txViewMode = 'catalog'" :class="txViewMode === 'catalog' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
                     <i class="fas fa-boxes"></i> รายการสินค้าคลัง
                 </button>
@@ -425,7 +457,7 @@
             <div v-show="txViewMode === 'catalog'" class="space-y-3 min-w-0 w-full">
                 
                 <!-- Search & Category Card -->
-                <div class="bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5 min-w-0 w-full">
+                <div class="w5-filter-surface bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5 min-w-0 w-full">
                     <div class="relative flex items-center">
                         <i class="fas fa-search absolute left-3.5 text-slate-400 text-sm pointer-events-none"></i>
                         <input type="text" v-model="searchTransactionList" placeholder="พิมพ์ชื่อสินค้า หรือ ค้นหา..." class="w-full bg-slate-50 border border-slate-300 focus:border-[#171c8f] focus:bg-white rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm outline-none transition focus:ring-2 focus:ring-indigo-100 font-medium">
@@ -451,9 +483,9 @@
                 </div>
 
                 <!-- Product List Cards -->
-                <div v-if="filteredCatalogProducts.length > 0" class="space-y-2.5">
-                    <div v-for="product in filteredCatalogProducts" :key="product.id" :class="{'opacity-60 bg-slate-100/70': product.stock <= 0}" class="bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 shadow-sm flex items-center justify-between gap-2 sm:gap-3 hover:border-indigo-200 transition">
-                        <div class="flex-1 min-w-0">
+                <div v-if="filteredCatalogProducts.length > 0" class="w5-catalog-grid">
+                    <div v-for="product in filteredCatalogProducts" :key="product.id" :class="{'opacity-60 bg-slate-100/70': product.stock <= 0}" class="w5-product-card bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 shadow-sm flex items-center justify-between gap-2 sm:gap-3 hover:border-indigo-200 transition">
+                        <div class="w5-product-copy flex-1 min-w-0">
                             <h3 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2">{{ product.name }}</h3>
                             <div class="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                                 <span :class="getProductCategoryClass(product)" class="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1">
@@ -463,7 +495,7 @@
                                 <span v-if="product.unit" class="text-[9px] sm:text-[10px] text-slate-400 font-medium">หน่วย: {{ product.unit }}</span>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <div class="w5-product-actions flex items-center gap-2 sm:gap-3 shrink-0">
                             <div class="text-right">
                                 <span class="block text-[9px] sm:text-[10px] font-semibold text-slate-400">คงเหลือ</span>
                                 <div class="font-extrabold text-sm sm:text-base leading-none" :class="product.stock <= 0 ? 'text-rose-600' : (product.stock < 20 ? 'text-amber-600' : 'text-emerald-600')">
@@ -798,7 +830,7 @@
     </main>
 
     <!-- Bottom Navigation Bar -->
-    <nav class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-slate-200 flex justify-around text-[11px] font-bold text-slate-500 shadow-2xl z-30">
+    <nav class="w5-bottom-nav fixed bottom-0 left-0 right-0 mx-auto bg-white border-t border-slate-200 flex justify-around text-[11px] font-bold text-slate-500 shadow-2xl z-30">
         <button type="button" @click="activeTab = 'transaction'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'transaction'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
             <i class="fas fa-boxes text-base"></i>
             <span>เบิก-รับ</span>
