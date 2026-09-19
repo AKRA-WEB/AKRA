@@ -2,6 +2,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+    <script src="js/akra-shell-bridge.js?v=20260919.03"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AKRA W5 — คลังสินค้า W5</title>
@@ -122,7 +123,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260914.04";
+    var CURRENT_VERSION = "20260919.03";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -291,110 +292,80 @@
         } catch (e) { return null; }
     }
 
-    function clearStoredSession() {
-        localStorage.removeItem('akra_user_data');
-        localStorage.removeItem('akra_session_token');
+    function clearStoredSession(expectedToken = sessionToken) {
+        try {
+            if (!window.AkraModule?.embedded && expectedToken && localStorage.getItem('akra_w5_session_token') === expectedToken) {
+                localStorage.removeItem('akra_w5_user_data');
+                localStorage.removeItem('akra_w5_session_token');
+            }
+        } catch (_) { /* Page identity is still invalidated if browser storage is unavailable. */ }
         appUser = null;
         currentUser = null;
         sessionToken = null;
     }
 
-    function redirectToLogin(message) {
-        clearStoredSession();
+    function redirectToLogin(message, expectedToken = sessionToken) {
+        clearStoredSession(expectedToken);
         if (message) alert(message);
-        window.location.replace(MAIN_PORTAL_URL);
+        window.AkraModule.authRequired(MAIN_PORTAL_URL);
     }
 
     async function verifyAccess() {
-        const isPreviewEnv = window.self !== window.top || window.location.hostname === "" || ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
-        window.isPreviewEnv = isPreviewEnv;
+        if (window.AkraModule?.embedded) {
+            window.isPreviewEnv = false;
+            try {
+                const user = await window.AkraModule.verifySession('app-w5');
+                sessionToken = window.AkraModule.getToken();
+                appUser = { ...user, tokenVersion: 2, token: sessionToken };
+                currentUser = user.name;
+                return true;
+            } catch (_) {
+                window.AkraModule.authRequired(MAIN_PORTAL_URL);
+                return false;
+            }
+        }
+        window.isPreviewEnv = false;
         const urlParams = new URLSearchParams(window.location.search);
-        const ssoToken = urlParams.get('sso');
-        const cachedToken = localStorage.getItem('akra_session_token');
-
-        // 1. Instant JWT Verification from SSO Param
-        if (ssoToken) {
-            const jwtUser = decodeJwtPayload(ssoToken);
-            if (jwtUser) {
-                const roles = (jwtUser.roles || []).map(r => String(r || '').trim().toUpperCase());
-                const perms = (jwtUser.perms && typeof jwtUser.perms === 'object') ? jwtUser.perms : {};
-                const akraPerms = Array.isArray(perms['app-akra']) ? perms['app-akra'] : [];
-                const hasPermission = roles.includes('ADMIN') || roles.some(role => ALLOWED_ROLES.includes(role)) || akraPerms.length > 0;
-                if (hasPermission) {
-                    appUser = {
-                        id: jwtUser.id,
-                        name: jwtUser.name || jwtUser.id,
-                        roles: roles,
-                        perms: perms,
-                        token: ssoToken
-                    };
-                    currentUser = appUser.name;
-                    sessionToken = ssoToken;
-                    localStorage.setItem('akra_user_data', JSON.stringify(appUser));
-                    localStorage.setItem('akra_session_token', sessionToken);
-                    try { window.history.replaceState({}, document.title, window.location.pathname); } catch(e) {}
-                    return true;
-                } else {
-                    redirectToLogin('คุณไม่มีสิทธิ์เข้าใช้งานระบบนี้');
-                    return false;
-                }
-            } else {
+        const ssoToken = window.AkraModule?.getToken() || urlParams.get('sso');
+        const cachedToken = localStorage.getItem('akra_w5_session_token');
+        const tokenToVerify = ssoToken || cachedToken;
+        if (ssoToken) { try { window.history.replaceState({}, document.title, window.location.pathname); } catch (_) {} }
+        if (tokenToVerify) {
+            try {
+                const user = await window.AkraModule.verifySession('app-w5', tokenToVerify);
+                if (localStorage.getItem('akra_w5_session_token') !== cachedToken) throw new Error('session_changed');
+                if (user.mustChangePassword === true) throw new Error('mandatory_password_change_required');
+                appUser = { ...user, tokenVersion: 2, token: tokenToVerify };
+                currentUser = user.name;
+                sessionToken = tokenToVerify;
                 try {
-                    const verifyURL = `${MAIN_SSO_API_URL}?action=verifyToken&token=${encodeURIComponent(ssoToken)}&roles=${ALLOWED_ROLES.join(',')}`;
-                    const response = await fetch(verifyURL);
-                    const result = await response.json();
-                    if (!result.valid || !result.user) throw new Error(result.reason || 'invalid_session');
-                    appUser = result.user;
-                    appUser.token = ssoToken;
-                    currentUser = appUser.name;
-                    sessionToken = ssoToken;
-                    localStorage.setItem('akra_user_data', JSON.stringify(appUser));
-                    localStorage.setItem('akra_session_token', sessionToken);
-                    try { window.history.replaceState({}, document.title, window.location.pathname); } catch(e) {}
-                    return true;
-                } catch (error) {
-                    redirectToLogin('เซสชันไม่ถูกต้องหรือหมดอายุ กรุณาเข้าสู่ระบบใหม่');
-                    return false;
-                }
+                    localStorage.setItem('akra_w5_user_data', JSON.stringify(appUser));
+                    localStorage.setItem('akra_w5_session_token', tokenToVerify);
+                } catch (_) { /* Verified in-memory session remains usable. */ }
+                return true;
+            } catch (_) {
+                redirectToLogin('เซสชันไม่ถูกต้องหรือบัญชีเปลี่ยนแล้ว กรุณาเข้าสู่ระบบใหม่', tokenToVerify);
+                return false;
             }
         }
-
-        // 2. Instant JWT Verification from Cached Token
-        if (cachedToken) {
-            const jwtUser = decodeJwtPayload(cachedToken);
-            if (jwtUser) {
-                const roles = (jwtUser.roles || []).map(r => String(r || '').trim().toUpperCase());
-                const perms = (jwtUser.perms && typeof jwtUser.perms === 'object') ? jwtUser.perms : {};
-                const akraPerms = Array.isArray(perms['app-akra']) ? perms['app-akra'] : [];
-                const hasPermission = roles.includes('ADMIN') || roles.some(role => ALLOWED_ROLES.includes(role)) || akraPerms.length > 0;
-                if (hasPermission) {
-                    appUser = {
-                        id: jwtUser.id,
-                        name: jwtUser.name || jwtUser.id,
-                        roles: roles,
-                        perms: perms,
-                        token: cachedToken
-                    };
-                    currentUser = appUser.name;
-                    sessionToken = cachedToken;
-                    localStorage.setItem('akra_user_data', JSON.stringify(appUser));
-                    return true;
-                }
-            }
-            clearStoredSession();
-        }
-
-        // 3. Preview/Test environment fallback
-        if (isPreviewEnv) {
+        if (window.AkraModule?.isLocalPreview() === true) {
+            window.isPreviewEnv = true;
             appUser = { name: "Tester (โหมดจำลอง)", roles: ["ADMIN"], perms: { 'app-akra': ['manageProducts', 'viewW5'] }, token: "" };
             currentUser = appUser.name;
             sessionToken = "";
             return true;
         }
 
-        // 4. No valid session
         redirectToLogin('กรุณาเข้าสู่ระบบผ่านหน้า Main Portal ก่อนใช้งาน');
         return false;
+    }
+
+    function getW5Token() {
+        try { return window.AkraModule?.embedded ? window.AkraModule.getToken() : (sessionToken || ''); }
+        catch (_) { return ''; }
+    }
+    function isCurrentW5Session(user, token) {
+        try { return appUser === user && getW5Token() === token; } catch (_) { return false; }
     }
 
     window.sendAppLog = function(action, details) {
@@ -410,6 +381,7 @@
 <!-- ========================================================== -->
 
 <div id="app" class="w5-app min-h-screen flex flex-col justify-between overflow-x-hidden">
+  <template v-if="isAuthorized">
 
     <!-- Offline Banner -->
     <div v-if="!isOnline" class="bg-amber-100 text-amber-900 text-xs px-4 py-2 text-center font-bold border-b border-amber-200 flex items-center justify-center gap-2">
@@ -1098,18 +1070,44 @@
         </div>
     </transition>
 
+  </template>
+  <div v-else role="status" class="p-6 text-center">
+    <p>{{ authMessage }}</p>
+    <button type="button" onclick="window.AkraModule.home(MAIN_PORTAL_URL)" class="mt-4 underline">กลับหน้า Main</button>
+  </div>
 </div>
 
 <script>
     const { createApp } = Vue;
     const WEB_APP_URL = "https://hgxrrskztbpejirrdpbq.supabase.co/functions/v1/akra-api";
     const AKRA_CACHE_TTL = 5 * 60 * 1000;
-    function getCache(key, ttlMs) { try { const raw = localStorage.getItem(key); if (!raw) return null; const w = JSON.parse(raw); if (Date.now() - (w._ts||0) > ttlMs) { localStorage.removeItem(key); return null; } return w._d; } catch(e) { localStorage.removeItem(key); return null; } }
-    function setCache(key, data) { localStorage.setItem(key, JSON.stringify({ _ts: Date.now(), _d: data })); }
+    function preferenceStorageKey(key) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(appUser?.identityId || '') ? key + '::identity:' + appUser.identityId : null;
+    }
+    function cacheStorageKey(key) {
+        const base = preferenceStorageKey(key);
+        return base && Number.isSafeInteger(appUser.sessionVersion) && appUser.sessionVersion > 0 && appUser.authorizationRevision
+            ? base + '::session:' + appUser.sessionVersion + '::authorization:' + encodeURIComponent(appUser.authorizationRevision) : null;
+    }
+    function removeCache(key) { try { const scoped = cacheStorageKey(key); if (scoped) localStorage.removeItem(scoped); } catch (_) {} }
+    function getCache(key, ttlMs) {
+        try {
+            const scoped = cacheStorageKey(key), raw = scoped && localStorage.getItem(scoped);
+            if (!raw) return null;
+            const value = JSON.parse(raw);
+            if (Date.now() - (value._ts || 0) > ttlMs) { removeCache(key); return null; }
+            return value._d;
+        } catch (_) { removeCache(key); return null; }
+    }
+    function setCache(key, data) {
+        try { const scoped = cacheStorageKey(key); if (!scoped) return false; localStorage.setItem(scoped, JSON.stringify({ _ts: Date.now(), _d: data })); return true; }
+        catch (_) { return false; }
+    }
 
     createApp({
         data() {
             return {
+                isAuthorized: false, authMessage: 'กำลังตรวจสอบสิทธิ์จาก Main...', sessionStorageHandler: null,
                 loggedInUser: currentUser || 'Guest',
                 isAdmin: false,
                 activeTab: 'transaction',
@@ -1199,14 +1197,28 @@
             if (!isVersionOk) return;
             AppVersionGuard.start({ current: CURRENT_VERSION, readActions: [] });
             const hasAccess = await verifyAccess();
-            if (!hasAccess) return;
+            if (!hasAccess) { this.authMessage = 'ตรวจสอบสิทธิ์ไม่สำเร็จ กรุณาเข้าใช้งานจาก Main'; return; }
+
+            this.isAuthorized = true;
+            window.AkraModule?.watchSession?.({appId:'app-w5', user:appUser, token:sessionToken,
+                invalidated:() => this.invalidateSession(),
+                refreshed:token => { sessionToken = token; }
+            });
+            if (!window.AkraModule?.embedded) {
+                this.sessionStorageHandler = event => {
+                    if (event.key !== null && !['akra_w5_session_token', 'akra_w5_user_data'].includes(event.key)) return;
+                    if (event.key !== null && event.oldValue === event.newValue) return;
+                    this.invalidateSession();
+                };
+                window.addEventListener('storage', this.sessionStorageHandler);
+            }
 
             this.loggedInUser = currentUser || 'Guest';
             this.form.user = currentUser || '';
 
             if (typeof appUser !== 'undefined' && appUser !== null) {
                 const appPerms = (appUser.perms && appUser.perms["app-akra"]) || [];
-                this.isAdmin = appPerms.length > 0
+                this.isAdmin = appUser.tokenVersion === 2 || Object.prototype.hasOwnProperty.call(appUser.perms || {}, 'app-akra')
                     ? appPerms.includes("manageProducts")
                     : (appUser.roles || []).some(r => r === 'ADMIN' || r === 'SUPERVISOR');
             }
@@ -1218,14 +1230,24 @@
             document.addEventListener('visibilitychange', this.visibilityHandler);
         },
         unmounted() {
+            if (this.sessionStorageHandler) window.removeEventListener('storage', this.sessionStorageHandler);
             if(this.refreshInterval) clearInterval(this.refreshInterval);
             if(this.visibilityHandler) document.removeEventListener('visibilitychange', this.visibilityHandler);
             this.dataRevision++;
         },
         methods: {
+            invalidateSession() {
+                this.isAuthorized = false;
+                this.authMessage = 'บัญชีหรือสิทธิ์เปลี่ยนแล้ว กรุณาเข้าใช้งานจาก Main และตรวจสอบผลรายการก่อนส่งซ้ำ';
+                this.dataRevision++;
+                this.products = []; this.history = []; this.pickList = []; this.customTags = {}; this.masterSearchResults = [];
+                appUser = null; currentUser = null; sessionToken = null;
+            },
             loadCustomTags() {
+                this.customTags = {};
                 try {
-                    const raw = localStorage.getItem('AKRA_PRODUCT_CUSTOM_TAGS');
+                    const key = preferenceStorageKey('AKRA_PRODUCT_CUSTOM_TAGS');
+                    const raw = key && localStorage.getItem(key);
                     if (raw) this.customTags = JSON.parse(raw) || {};
                 } catch (e) { this.customTags = {}; }
             },
@@ -1236,7 +1258,7 @@
                 } else {
                     this.customTags[productId] = tag;
                 }
-                localStorage.setItem('AKRA_PRODUCT_CUSTOM_TAGS', JSON.stringify(this.customTags));
+                try { const key = preferenceStorageKey('AKRA_PRODUCT_CUSTOM_TAGS'); if (key) localStorage.setItem(key, JSON.stringify(this.customTags)); } catch (_) { /* Optional local preference. */ }
                 const prod = this.products.find(p => p.id === productId);
                 if (prod) prod.category = (tag && tag !== 'auto') ? tag : '';
             },
@@ -1431,7 +1453,7 @@
                 if (success) {
                     prod.stock -= qty;
                     this.history.push({ date: uiDate, time: uiTime, type: 'out', productName: prod.name, qty: qty, user: userName });
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('เบิกด่วน W5', `${prod.name} จำนวน ${qty} ${prod.unit || 'ชิ้น'}`);
                     this.triggerToast(`เบิก ${prod.name} จำนวน ${qty} สำเร็จ`);
                     this.closeWithdrawStepper();
@@ -1445,8 +1467,9 @@
                 if (Date.now() - this.lastDataLoadedAt >= 30000) return this.loadData(true);
             },
             loadData(silent = false) {
-                if (!this.isOnline || this.dataMutationPending) return Promise.resolve();
-                const token = sessionToken;
+                if (!this.isAuthorized || !this.isOnline || this.dataMutationPending) return Promise.resolve();
+                const token = getW5Token();
+                if (!token && !window.isPreviewEnv) { this.invalidateSession(); return Promise.resolve(); }
                 const revision = this.dataRevision;
                 if (this.dataLoadPromise && this.dataLoadToken === token && this.dataLoadRevision === revision) return this.dataLoadPromise;
                 this.dataLoadToken = token;
@@ -1457,7 +1480,8 @@
                 return pending;
             },
             async fetchDataSnapshot(silent, token, revision) {
-                if (!this.isOnline) return;
+                if (!this.isAuthorized || !this.isOnline) return;
+                const owner = appUser;
                 this.isSilentLoading = silent;
                 const cached = getCache('AKRA_WMS_DATA', AKRA_CACHE_TTL);
                 if (cached && !silent) {
@@ -1468,12 +1492,14 @@
                     this.isLoading = true;
                 }
                 try {
+                    if (window.isPreviewEnv) throw new Error('local_preview');
                     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
                     const response = await fetch(`${WEB_APP_URL}?action=getData${tokenParam}`, {
                         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                     });
                     const data = await response.json();
-                    if (token !== sessionToken || revision !== this.dataRevision) return;
+                    if (!isCurrentW5Session(owner, token) || revision !== this.dataRevision) return;
+                    if (response.status === 401 || response.status === 403) { this.invalidateSession(); return; }
                     if (!response.ok || data.success === false) throw new Error(data.error || 'load_failed');
                     this.lastDataLoadedAt = Date.now();
                     if (data.products) {
@@ -1483,7 +1509,7 @@
                     if (data.history) this.history = data.history;
                     if (data.pickList) this.pickList = data.pickList;
                 } catch (error) {
-                    if (token !== sessionToken || revision !== this.dataRevision) return;
+                    if (!isCurrentW5Session(owner, token) || revision !== this.dataRevision) return;
                     if (window.isPreviewEnv && this.products.length === 0) {
                         this.products = [
                             { id: 1, name: "^Z/วิปปิ้งครีม Rich's โกลด์ (ลัง12x907g)", stock: 24, unit: "ลัง", category: "chilled" },
@@ -1508,36 +1534,47 @@
                         this.showAlert('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อมูลจากระบบได้', true);
                     }
                 } finally {
-                    if (token === sessionToken && revision === this.dataRevision) {
+                    if (isCurrentW5Session(owner, token) && revision === this.dataRevision) {
                         this.isLoading = false;
                         this.isSilentLoading = false;
                     }
                 }
             },
             async apiCall(payload) {
+                const operation = () => this.transportApiCall(payload);
+                return window.AkraModule?.embedded ? window.AkraModule.runMutation(operation) : operation();
+            },
+            async transportApiCall(payload) {
                 if (await AppVersionGuard.blockIfStale(payload && payload.action)) return false;
-                if (!this.isOnline) return true;
+                if (!this.isOnline) {
+                    this.showAlert('ยังไม่ได้บันทึก', 'ไม่มีการเชื่อมต่ออินเทอร์เน็ต กรุณาเชื่อมต่อแล้วส่งรายการอีกครั้ง', true);
+                    return false;
+                }
+                const owner = appUser, token = getW5Token();
+                if (!this.isAuthorized || !owner || !token || window.isPreviewEnv) return false;
                 this.isLoading = true; this.isSilentLoading = false;
                 this.dataRevision++;
                 this.dataMutationPending = true;
                 try {
-                    const bodyPayload = { ...payload, token: sessionToken };
+                    const bodyPayload = { ...payload, token };
                     const response = await fetch(WEB_APP_URL, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'Authorization': sessionToken ? `Bearer ${sessionToken}` : ''
+                            'Authorization': `Bearer ${token}`
                         },
                         body: JSON.stringify(bodyPayload)
                     });
                     const resJson = await response.json();
+                    if (!isCurrentW5Session(owner, token)) return false;
                     if (!response.ok || resJson.success === false) {
                         const errMsg = resJson.error || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล';
                         if (response.status === 401 || errMsg === 'invalid_or_expired_token' || errMsg === 'no_token') {
                             clearStoredSession();
+                            this.invalidateSession();
                             this.showAlert('เซสชันหมดอายุ', 'เซสชันการใช้งานของคุณหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่ผ่าน Main Portal', true);
                             setTimeout(() => {
-                                window.location.replace(MAIN_PORTAL_URL);
+                                window.AkraModule.authRequired(MAIN_PORTAL_URL);
                             }, 2000);
                             return false;
                         }
@@ -1548,8 +1585,10 @@
                         this.showAlert('ข้อผิดพลาด', errMsg, true);
                         return false;
                     }
+                    window.AkraModule?.markSaved?.();
                     return resJson || true;
                 } catch (error) {
+                    if (!isCurrentW5Session(owner, token)) return false;
                     this.showAlert('ข้อผิดพลาด', 'เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์', true);
                     return false;
                 } finally {
@@ -1590,7 +1629,7 @@
                 if (success) {
                     if (this.form.type === 'in') product.stock += qty; else product.stock -= qty;
                     this.history.push({ date: uiDate, time: uiTime, type: this.form.type, productName: product.name, qty: qty, user: this.form.user.trim() });
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog(`ทำรายการ${this.form.type === 'in' ? 'รับเข้า' : 'เบิกออก'} W5`, `${product.name} จำนวน ${qty} ${product.unit || 'ชิ้น'}`);
                     this.form.productId = ''; this.form.qty = null; this.searchTransaction = ''; this.showModal = false;
                     this.triggerToast('บันทึกรายการสำเร็จแล้ว');
@@ -1620,7 +1659,7 @@
                 const success = await this.apiCall({ action: 'addPickList', ...newItem });
                 if(success) {
                     this.pickList.push(newItem);
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('สร้างใบจัด W5', `รอเบิก ${product.name} จำนวน ${newItem.qty} ${product.unit || 'ชิ้น'}`);
                     this.triggerToast('เพิ่มลงใบจัดเรียบร้อยแล้ว');
                     this.form.productId = ''; this.form.qty = null; this.searchTransaction = ''; this.activeTab = 'picklist';
@@ -1639,7 +1678,7 @@
                     if(product) product.stock -= this.pickModal.actualQty;
                     this.pickList = this.pickList.filter(p => p.pickId !== item.pickId);
                     this.history.push({ date: uiDate, time: uiTime, type: 'out', productName: item.productName, qty: this.pickModal.actualQty, user: this.loggedInUser });
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('หยิบสินค้าตามใบจัด W5', `เบิก ${item.productName} ออก ${this.pickModal.actualQty} ${product ? product.unit || 'ชิ้น' : 'ชิ้น'}`);
                     this.triggerToast('หยิบสินค้าและตัดสต็อกเรียบร้อย'); this.pickModal.show = false;
                 }
@@ -1648,7 +1687,7 @@
             confirmRemovePickList(item) { this.showConfirmUI('ยืนยันลบใบจัด', `ต้องการลบรายการขอเบิกสินค้านี้ใช่หรือไม่?\n\n"${item.productName}"\nจำนวน ${item.qty} ${this.getProductUnitByName(item.productName)}`, 'bg-rose-600 hover:bg-rose-700', 'fas fa-trash text-rose-500', this.processRemovePickList, item); },
             async processRemovePickList(item) {
                 this.isSubmitting = true; const success = await this.apiCall({ action: 'removePickList', pickId: item.pickId });
-                if(success) { this.pickList = this.pickList.filter(p => p.pickId !== item.pickId); localStorage.removeItem('AKRA_WMS_DATA'); if (window.sendAppLog) window.sendAppLog('ยกเลิกใบจัด W5', `ยกเลิกการรอเบิก ${item.productName}`); this.triggerToast('ลบรายการใบจัดสำเร็จ'); }
+                if(success) { this.pickList = this.pickList.filter(p => p.pickId !== item.pickId); removeCache('AKRA_WMS_DATA'); if (window.sendAppLog) window.sendAppLog('ยกเลิกใบจัด W5', `ยกเลิกการรอเบิก ${item.productName}`); this.triggerToast('ลบรายการใบจัดสำเร็จ'); }
                 this.isSubmitting = false;
             },
 
@@ -1662,7 +1701,7 @@
                 if (success) {
                     if (reverseType === 'in') product.stock += log.qty; else product.stock -= log.qty;
                     this.history.push({ type: reverseType, productName: product.name + ' [ยกเลิก]', qty: log.qty, user: this.loggedInUser, date: uiDate, time: uiTime });
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog(`ยกเลิกรายการ${log.type === 'in' ? 'รับเข้า' : 'เบิกออก'} W5`, `คืนยอด ${product.name} จำนวน ${log.qty} ${product.unit || 'ชิ้น'}`);
                     this.triggerToast('ยกเลิกรายการและคืนยอดสำเร็จ');
                 }
@@ -1688,7 +1727,7 @@
                 if (success) {
                     const product = this.products.find(p => p.id === this.adjustModal.id);
                     if(product) product.stock = this.adjustModal.newStock;
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     
                     const uiDate = this.getTodayStr();
                     const uiTime = new Date().toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -1717,13 +1756,17 @@
                 }, 200);
             },
             async fetchMasterProducts(q) {
+                if (!this.isAuthorized || !appUser) return;
+                const owner = appUser, token = getW5Token();
+                if (!token) return;
                 this.isSearchingMaster = true;
                 try {
-                    const tokenParam = sessionToken ? `&token=${encodeURIComponent(sessionToken)}` : '';
+                    const tokenParam = `&token=${encodeURIComponent(token)}`;
                     const response = await fetch(`${WEB_APP_URL}?action=searchMasterProducts&q=${encodeURIComponent(q)}${tokenParam}`, {
-                        headers: sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {}
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
                     const data = await response.json();
+                    if (!isCurrentW5Session(owner, token)) return;
                     if (data.success && Array.isArray(data.products)) {
                         this.masterSearchResults = data.products;
                         this.showMasterDropdown = this.masterSearchResults.length > 0;
@@ -1761,7 +1804,7 @@
                     } else {
                         await this.loadData(true);
                     }
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('เพิ่มสินค้า', `เพิ่ม ${pName} W5`);
                     this.newProductName = '';
                     this.newProductUnit = 'ชิ้น';
@@ -1806,7 +1849,7 @@
                             this.setProductCustomTag(product.id, this.editModal.newCategory);
                         }
                     }
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('แก้ไขข้อมูลสินค้า', `${this.editModal.oldName} (แท็ก: ${this.editModal.newCategory})`);
                     this.triggerToast('อัปเดตข้อมูลและแท็กสินค้าสำเร็จ');
                     this.editModal.show = false;
@@ -1820,7 +1863,7 @@
                 const success = await this.apiCall({ action: 'deleteProduct', productId: id });
                 if (success) {
                     this.products = this.products.filter(p => p.id !== id);
-                    localStorage.removeItem('AKRA_WMS_DATA');
+                    removeCache('AKRA_WMS_DATA');
                     if (window.sendAppLog) window.sendAppLog('ลบสินค้า', `ลบ ${productToDelete ? productToDelete.name : id} W5`);
                     this.triggerToast('ลบสำเร็จ');
                 }

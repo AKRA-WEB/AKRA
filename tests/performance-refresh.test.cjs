@@ -12,8 +12,11 @@ const context=vm.createContext({console, Date, Promise, currentUser:'fixture', s
   window:{}, Vue:{createApp(c){config=c;return {mount(){}};}},
   AppVersionGuard:{blockIfStale:async()=>false},
   fetch:(url,options)=>new Promise((resolve,reject)=>requests.push({url,options,resolve,reject}))});
-vm.runInContext(scripts.find(s=>s.includes('createApp({')),context);
+scripts.forEach(s=>vm.runInContext(s,context));
+context.sessionToken='session-a';context.appUser={id:'fixture',identityId:'10000000-0000-4000-8000-000000000011',sessionVersion:1,authorizationRevision:'fixture'};
+context.AppVersionGuard.blockIfStale=async()=>false;
 const app={...config.data()};for(const [k,v] of Object.entries(config.methods))app[k]=v.bind(app);
+app.isAuthorized=true;
 app.showAlert=()=>{};
 function finish(index,products=[{id:1,name:'fixture',stock:1}],ok=true){requests[index].resolve({ok,status:ok?200:500,json:async()=>({success:ok,products,history:[],pickList:[]})});}
 (async()=>{

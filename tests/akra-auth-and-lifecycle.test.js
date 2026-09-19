@@ -35,7 +35,7 @@ const versionMatch = indexSource.match(/(?:const|var|let)\s+CURRENT_VERSION\s*=\
 assert.ok(versionMatch, 'CURRENT_VERSION constant must be defined in index.html');
 const indexVersion = versionMatch[1];
 assert.strictEqual(indexVersion, versionJson.version, `Version mismatch: index.html=${indexVersion}, version.json=${versionJson.version}`);
-assert.strictEqual(indexVersion, '20260914.04', 'Target version must be 20260914.04');
+assert.strictEqual(indexVersion, '20260919.03', 'Target version must be 20260919.03');
 console.log(`  ✓ Version parity verified: ${indexVersion}`);
 
 // -------------------------------------------------------------
@@ -134,6 +134,16 @@ function createSandbox(extraGlobals = {}) {
     ...extraGlobals
   };
 
+  // Synthetic Main verification, not signature/SQL evidence (covered by database suites).
+  sandbox.window.AkraModule = { embedded:false, isLocalPreview:()=>false, getToken:()=>'',
+    authRequired: url=>{locationUrl=url;},
+    verifySession:async (appId,token)=>{
+      assert.equal(appId,'app-w5');
+      const user=JSON.parse(Buffer.from(token.split('.')[1],'base64url').toString());
+      if(user.exp*1000<=Date.now())throw Error('invalid_or_expired_token');
+      return {...user,identityId:'10000000-0000-4000-8000-000000000011',sessionVersion:1,authorizationRevision:'fixture'};
+    }
+  };
   const context = vm.createContext(sandbox);
   return {
     context,
@@ -182,7 +192,7 @@ async function runAuthTests() {
     const result = await context.verifyAccess();
     assert.strictEqual(result, true, 'Valid SSO token must verify access');
     assert.strictEqual(context.currentUser, 'SSO User');
-    assert.strictEqual(storage['akra_session_token'], validToken);
+    assert.strictEqual(storage['akra_w5_session_token'], validToken);
     assert.deepStrictEqual(context.appUser.perms, { 'app-akra': ['viewW5', 'manageProducts'] });
     assert.strictEqual(getLocation().includes('?sso='), false, 'sso query parameter must be removed from URL');
     console.log('  ✓ Valid SSO token successfully sets session and removes query param');
@@ -192,7 +202,7 @@ async function runAuthTests() {
   {
     const { context, storage } = createSandbox();
     const validToken = makeMockJwt({ id: 'user_cached', name: 'Cached User', roles: ['ADMIN'], exp: Math.floor(Date.now() / 1000) + 3600 });
-    storage['akra_session_token'] = validToken;
+    storage['akra_w5_session_token'] = validToken;
 
     vm.runInContext(authScriptMatch, context);
     const result = await context.verifyAccess();
@@ -206,14 +216,14 @@ async function runAuthTests() {
   {
     const { context, storage, getLocation } = createSandbox();
     const expiredToken = makeMockJwt({ id: 'user_expired', name: 'Expired User', roles: ['ADMIN'], exp: Math.floor(Date.now() / 1000) - 3600 });
-    storage['akra_session_token'] = expiredToken;
-    storage['akra_user_data'] = JSON.stringify({ id: 'user_expired', name: 'Expired User', roles: ['ADMIN'] });
+    storage['akra_w5_session_token'] = expiredToken;
+    storage['akra_w5_user_data'] = JSON.stringify({ id: 'user_expired', name: 'Expired User', roles: ['ADMIN'] });
 
     vm.runInContext(authScriptMatch, context);
     const result = await context.verifyAccess();
     assert.strictEqual(result, false, 'Expired cached token must NOT be allowed');
-    assert.strictEqual(storage['akra_session_token'], undefined, 'Expired session token must be cleared');
-    assert.strictEqual(storage['akra_user_data'], undefined, 'Expired user data must be cleared');
+    assert.strictEqual(storage['akra_w5_session_token'], undefined, 'Expired session token must be cleared');
+    assert.strictEqual(storage['akra_w5_user_data'], undefined, 'Expired user data must be cleared');
     assert.strictEqual(context.sessionToken, null);
     assert.strictEqual(getLocation(), 'https://akra-web.github.io/Main/', 'Must redirect to Main Portal');
     console.log('  ✓ Expired cached session is strictly rejected, cleared, and redirected to login (Zombie fix verified)');
@@ -235,7 +245,7 @@ async function runApiCallTests() {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ version: '20260914.04' })
+          json: async () => ({ version: indexVersion })
         };
       }
       return {
@@ -247,8 +257,8 @@ async function runApiCallTests() {
   });
 
   const validToken = makeMockJwt({ id: 'u_test', name: 'Test User', roles: ['AKRA'], exp: Math.floor(Date.now() / 1000) + 3600 });
-  storage['akra_session_token'] = validToken;
-  storage['akra_user_data'] = JSON.stringify({ id: 'u_test', name: 'Test User', roles: ['AKRA'] });
+  storage['akra_w5_session_token'] = validToken;
+  storage['akra_w5_user_data'] = JSON.stringify({ id: 'u_test', name: 'Test User', roles: ['AKRA'] });
 
   vm.runInContext(authScriptMatch, context);
   context.AppVersionGuard.start({ current: context.CURRENT_VERSION, readActions: [] });
@@ -261,6 +271,7 @@ async function runApiCallTests() {
 
   const instanceState = {
     ...vueConfig.data(),
+    isAuthorized: true,
     isOnline: true,
     isLoading: false,
     isSilentLoading: false,
@@ -270,7 +281,8 @@ async function runApiCallTests() {
     }
   };
 
-  const boundApiCall = vueConfig.methods.apiCall.bind(instanceState);
+  for (const [name,fn] of Object.entries(vueConfig.methods)) if (!Object.hasOwn(instanceState,name)) instanceState[name]=fn.bind(instanceState);
+  const boundApiCall = instanceState.apiCall;
 
   // Test 401 Invalid or Expired Token during mutation
   simulatedStatus = 401;
@@ -278,12 +290,14 @@ async function runApiCallTests() {
   const callRes = await boundApiCall({ action: 'addProduct', product: { name: 'Test Product' } });
   assert.strictEqual(callRes, false, 'apiCall must return false on 401');
   assert.strictEqual(instanceState.messageBox.title, 'เซสชันหมดอายุ');
-  assert.strictEqual(storage['akra_session_token'], undefined, 'Session token must be cleared upon 401');
-  assert.strictEqual(storage['akra_user_data'], undefined, 'User data must be cleared upon 401');
+  assert.strictEqual(storage['akra_w5_session_token'], undefined, 'Session token must be cleared upon 401');
+  assert.strictEqual(storage['akra_w5_user_data'], undefined, 'User data must be cleared upon 401');
   assert.strictEqual(getLocation(), 'https://akra-web.github.io/Main/', 'Must redirect to Main Portal on 401');
   console.log('  ✓ 401 invalid_or_expired_token clears session, alerts user, and redirects to Main Portal');
 
   // Test 403 Permission Denied
+  context.window.location.href=`https://akra-web.github.io/AKRA/?sso=${validToken}`;
+  await context.verifyAccess();instanceState.isAuthorized=true;
   simulatedStatus = 403;
   simulatedBody = { success: false, error: 'admin_permission_required' };
   const callRes403 = await boundApiCall({ action: 'adjustStock', productId: 1, newStock: 50 });
@@ -307,7 +321,7 @@ async function runAddProductRealIdTests() {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ version: '20260914.04' })
+          json: async () => ({ version: indexVersion })
         };
       }
       const body = JSON.parse((options && options.body) || '{}');
@@ -350,9 +364,8 @@ async function runAddProductRealIdTests() {
   });
 
   const validToken = makeMockJwt({ id: 'u_admin', name: 'Admin User', roles: ['ADMIN'], exp: Math.floor(Date.now() / 1000) + 3600 });
-  storage['akra_session_token'] = validToken;
-  storage['akra_user_data'] = JSON.stringify({ id: 'u_admin', name: 'Admin User', roles: ['ADMIN'] });
-  storage['AKRA_WMS_DATA'] = JSON.stringify({ _ts: Date.now(), _d: { products: [{ id: 1, name: 'Existing Prod', stock: 10 }] } });
+  storage['akra_w5_session_token'] = validToken;
+  storage['akra_w5_user_data'] = JSON.stringify({ id: 'u_admin', name: 'Admin User', roles: ['ADMIN'] });
 
   vm.runInContext(authScriptMatch, context);
   context.AppVersionGuard.start({ current: context.CURRENT_VERSION, readActions: [] });
@@ -361,8 +374,11 @@ async function runAddProductRealIdTests() {
   vm.runInContext(vueScriptMatch, context);
   const vueConfig = getVueConfig();
 
+  context.setCache('AKRA_WMS_DATA',{products:[{id:1,name:'Existing Prod',stock:10}]});
+  const scopedCacheKey=context.cacheStorageKey('AKRA_WMS_DATA');
   const instanceState = {
     ...vueConfig.data(),
+    isAuthorized: true,
     isOnline: true,
     isLoading: false,
     isSilentLoading: false,
@@ -380,6 +396,7 @@ async function runAddProductRealIdTests() {
     }
   };
 
+  for (const [name,fn] of Object.entries(vueConfig.methods)) if (!Object.hasOwn(instanceState,name)) instanceState[name]=fn.bind(instanceState);
   instanceState.apiCall = vueConfig.methods.apiCall.bind(instanceState);
   instanceState.addProduct = vueConfig.methods.addProduct.bind(instanceState);
   instanceState.confirmTransaction = vueConfig.methods.confirmTransaction.bind(instanceState);
@@ -390,7 +407,7 @@ async function runAddProductRealIdTests() {
   const addedProd = instanceState.products.find(p => p.name === 'เนยสด ตราออร์คิด');
   assert.ok(addedProd, 'Product must be added to reactive state');
   assert.strictEqual(addedProd.id, SERVER_PRODUCT_ID, `Product ID must equal database ID (${SERVER_PRODUCT_ID}), not synthetic client ID`);
-  assert.strictEqual(storage['AKRA_WMS_DATA'], undefined, 'AKRA_WMS_DATA cache must be invalidated on addProduct');
+  assert.strictEqual(storage[scopedCacheKey], undefined, 'current-owner AKRA_WMS_DATA cache must be invalidated on addProduct');
   console.log(`  ✓ addProduct correctly captures and stores real server ID (${SERVER_PRODUCT_ID})`);
 
   // 2. Perform Stock In on the newly added product
