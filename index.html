@@ -2,10 +2,10 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <script src="js/akra-shell-bridge.js?v=20260919.06"></script>
+    <script src="js/akra-shell-bridge.js?v=20261001.01"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AKRA W5 — คลังสินค้า W5</title>
+    <title>BUYMORETH | เบิกย้ายสินค้า (AKRA)</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23171c8f'/%3E%3Cpath d='M7 15 16 9l9 6v10H7z' fill='none' stroke='white' stroke-width='2'/%3E%3Cpath d='M6 15h20M13 25v-6h6v6' stroke='%23e35205' stroke-width='2'/%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -123,7 +123,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20260919.06";
+    var CURRENT_VERSION = "20261001.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -356,7 +356,7 @@
             return true;
         }
 
-        redirectToLogin('กรุณาเข้าสู่ระบบผ่านหน้า Main Portal ก่อนใช้งาน');
+        redirectToLogin('กรุณาเข้าสู่ระบบผ่านหน้า BUYMORETH ก่อนใช้งาน');
         return false;
     }
 
@@ -1107,7 +1107,7 @@
     createApp({
         data() {
             return {
-                isAuthorized: false, authMessage: 'กำลังตรวจสอบสิทธิ์จาก Main...', sessionStorageHandler: null,
+                isAuthorized: false, authMessage: 'กำลังตรวจสอบสิทธิ์จาก BUYMORETH...', sessionStorageHandler: null,
                 loggedInUser: currentUser || 'Guest',
                 isAdmin: false,
                 activeTab: 'transaction',
@@ -1197,7 +1197,7 @@
             if (!isVersionOk) return;
             AppVersionGuard.start({ current: CURRENT_VERSION, readActions: [] });
             const hasAccess = await verifyAccess();
-            if (!hasAccess) { this.authMessage = 'ตรวจสอบสิทธิ์ไม่สำเร็จ กรุณาเข้าใช้งานจาก Main'; return; }
+            if (!hasAccess) { this.authMessage = 'ตรวจสอบสิทธิ์ไม่สำเร็จ กรุณาเข้าใช้งานจาก BUYMORETH'; return; }
 
             this.isAuthorized = true;
             window.AkraModule?.watchSession?.({appId:'app-w5', user:appUser, token:sessionToken,
@@ -1238,7 +1238,7 @@
         methods: {
             invalidateSession() {
                 this.isAuthorized = false;
-                this.authMessage = 'บัญชีหรือสิทธิ์เปลี่ยนแล้ว กรุณาเข้าใช้งานจาก Main และตรวจสอบผลรายการก่อนส่งซ้ำ';
+                this.authMessage = 'บัญชีหรือสิทธิ์เปลี่ยนแล้ว กรุณาเข้าใช้งานจาก BUYMORETH และตรวจสอบผลรายการก่อนส่งซ้ำ';
                 this.dataRevision++;
                 this.products = []; this.history = []; this.pickList = []; this.customTags = {}; this.masterSearchResults = [];
                 appUser = null; currentUser = null; sessionToken = null;
@@ -1572,7 +1572,7 @@
                         if (response.status === 401 || errMsg === 'invalid_or_expired_token' || errMsg === 'no_token') {
                             clearStoredSession();
                             this.invalidateSession();
-                            this.showAlert('เซสชันหมดอายุ', 'เซสชันการใช้งานของคุณหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่ผ่าน Main Portal', true);
+                            this.showAlert('เซสชันหมดอายุ', 'เซสชันการใช้งานของคุณหมดอายุแล้ว กรุณาเข้าสู่ระบบใหม่ผ่าน BUYMORETH', true);
                             setTimeout(() => {
                                 window.AkraModule.authRequired(MAIN_PORTAL_URL);
                             }, 2000);
