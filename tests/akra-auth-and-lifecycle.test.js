@@ -35,7 +35,6 @@ const versionMatch = indexSource.match(/(?:const|var|let)\s+CURRENT_VERSION\s*=\
 assert.ok(versionMatch, 'CURRENT_VERSION constant must be defined in index.html');
 const indexVersion = versionMatch[1];
 assert.strictEqual(indexVersion, versionJson.version, `Version mismatch: index.html=${indexVersion}, version.json=${versionJson.version}`);
-assert.strictEqual(indexVersion, '20260919.03', 'Target version must be 20260919.03');
 console.log(`  ✓ Version parity verified: ${indexVersion}`);
 
 // -------------------------------------------------------------

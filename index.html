@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <script src="js/akra-shell-bridge.js?v=20261002.01"></script>
+    <script src="js/akra-shell-bridge.js?v=20261003.01"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BUYMORETH | เบิกย้ายสินค้า (AKRA)</title>
@@ -80,42 +80,177 @@
         }
         .category-scroll::-webkit-scrollbar { display: none; }
 
-        /* W5 production candidate: share the approved GR/PO shell geometry while
-           leaving the incumbent Vue workflow and component handlers intact. */
-        html { background: #fff; }
-        body { font-family: 'Inter', 'Noto Sans Thai', system-ui, sans-serif; background: #fff; }
-        .w5-app { width: 100%; max-width: none; margin: 0; border: 0; box-shadow: none; background: #fff; }
-        .w5-topbar { min-height: 72px; padding: 0; background: #111827; border-bottom: 1px solid rgba(255, 255, 255, .08); }
-        .w5-topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(1440px, calc(100% - 44px)); min-height: 72px; margin: 0 auto; }
-        .w5-topbar .w5-brand-icon { width: 38px; height: 38px; border-radius: 10px; box-shadow: 0 5px 14px rgba(200, 79, 32, .18); }
-        .w5-topbar h1 { font-family: 'Inter', 'Noto Sans Thai', system-ui, sans-serif; font-size: 16px; letter-spacing: -.025em; }
-        .w5-operator { min-height: 36px; }
-        .w5-main { width: min(1440px, calc(100% - 44px)); margin: 0 auto; padding: 24px 0 104px; background: #fff; }
-        .w5-mode-switcher { border: 1px solid #e2e8f0; background: #f8fafc; }
-        .w5-filter-surface { border-color: #e2e8f0; border-radius: 14px; }
-        .w5-catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-        .w5-product-card { min-height: 178px; padding: 16px; border-radius: 15px; flex-direction: column; align-items: stretch; justify-content: space-between; }
-        .w5-product-card .w5-product-copy { min-height: 66px; }
-        .w5-product-card .w5-product-actions { justify-content: space-between; }
-        .w5-bottom-nav { max-width: none; box-shadow: 0 -10px 24px rgba(25, 35, 48, .09); }
-        .w5-app .fixed.inset-0 > .bg-white { max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
-        .w5-app .fixed.inset-0 > .bg-white button { min-height: 44px; min-width: 44px; }
-
-        @media (max-width: 640px) {
-            .w5-topbar-inner { width: calc(100% - 24px); min-height: 64px; gap: 10px; }
-            .w5-topbar { min-height: 64px; }
-            .w5-topbar .w5-brand-icon { width: 34px; height: 34px; border-radius: 9px; font-size: 13px; }
-            .w5-topbar h1 { font-size: 14px; }
-            .w5-operator { min-height: 34px; padding-inline: 9px; font-size: 11px; }
-            .w5-main { width: calc(100% - 24px); padding: 16px 0 96px; }
-            .w5-catalog-grid { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-            .w5-product-card { min-height: 0; padding: 12px; flex-direction: row; align-items: center; gap: 12px; }
-            .w5-product-card .w5-product-copy { min-height: 0; }
-            .w5-product-card .w5-product-copy h3 { display: block; overflow: visible; overflow-wrap: anywhere; }
-            .w5-product-card .w5-product-actions { flex-direction: column; align-items: flex-end; gap: 6px; max-width: 38%; }
-            .w5-product-card .w5-product-actions button { min-width: 44px; min-height: 44px; }
-            .w5-topbar button, .w5-main button { min-height: 44px; min-width: 44px; }
+        /* Direction A Ledger: W5 viewport determines the responsive table. */
+        html, body { background:#fff; }
+        body { font-variant-numeric:tabular-nums; }
+        .w5-app { width:100%; max-width:none; margin:0; border:0; box-shadow:none; background:#fff; color:#182234; }
+        .w5-app button { min-width:44px; min-height:44px; touch-action:manipulation; }
+        .w5-app :focus-visible { outline:3px solid #7c86e6; outline-offset:3px; }
+        .w5-topbar { min-height:72px; padding:0; background:#111b30; border-bottom:0; }
+        .w5-topbar-inner { display:flex; align-items:center; justify-content:space-between; gap:18px; width:min(1400px,calc(100% - 48px)); min-height:72px; margin:auto; }
+        .w5-topbar .w5-brand-icon { width:40px; height:40px; flex-shrink:0; border-radius:9px; background:#c44300; box-shadow:none; font-size:17px; }
+        .w5-topbar h1 { font-family:'Inter','Noto Sans Thai',system-ui,sans-serif; font-size:16px; letter-spacing:-.025em; }
+        .w5-operator { min-height:36px; border-radius:8px; }
+        .w5-topbar .akra-shell-injected-actions button { min-width:44px !important; min-height:44px !important; height:44px !important; }
+        .w5-main { width:min(1260px,calc(100% - 56px)); margin:auto; padding:26px 0 106px; }
+        .w5-page-heading { margin-bottom:20px; }
+        .w5-page-heading h2 { font-size:24px; font-weight:700; letter-spacing:-.025em; }
+        .w5-page-heading p { font-size:13px; color:#556276; margin-top:3px; }
+        .w5-main button, .w5-main input, .w5-main select { font-size:13px; }
+        .w5-main input, .w5-main select { min-height:48px; border-radius:8px; }
+        .w5-main li.cursor-pointer, .w5-main div.cursor-pointer { min-height:44px; }
+        .w5-main .text-slate-400, .w5-main .text-slate-500 { color:#556276; }
+        .w5-app [class~="text-[9px]"], .w5-app [class~="text-[10px]"], .w5-app [class~="text-[11px]"], .w5-app .text-xs { font-size:12px; line-height:1.55; }
+        .w5-main .shadow-sm, .w5-main .shadow-md, .w5-main .shadow-inner, .w5-bottom-nav { box-shadow:none; }
+        .w5-app [class~="bg-[#e35205]"], .w5-main .bg-amber-500 { background:#c44300; }
+        .w5-main [class~="rounded-2xl"], .w5-main [class~="rounded-xl"] { border-radius:8px; }
+        .w5-mode-switcher { display:flex; width:100%; gap:4px; border:0; border-bottom:1px solid #dce2eb; border-radius:0!important; background:transparent; padding:0; box-shadow:none; margin-bottom:24px; }
+        .w5-mode-switcher button { flex:0 1 auto; min-height:50px; padding:0 18px; border-radius:0; border-bottom:3px solid transparent; background:transparent; box-shadow:none; color:#556276; font-weight:600; }
+        .w5-mode-switcher button[aria-pressed="true"] { border-bottom-color:#171c8f; color:#171c8f; }
+        .w5-filter-surface { border:0; border-radius:0!important; box-shadow:none; padding:0; background:transparent; margin-bottom:22px; }
+        .w5-filter-surface input { background:#fff; border-color:#bbc5d5; padding-left:42px; font-size:14px; }
+        .w5-filter-surface input::placeholder { color:#647084; }
+        .w5-filter-surface .category-scroll { gap:4px; padding:0; }
+        .category-scroll button { flex-shrink:0; border-radius:7px; padding:0 14px; background:transparent; color:#556276; box-shadow:none; font-size:12px; }
+        .category-scroll button[aria-pressed="true"] { background:#ebedff; color:#171c8f; }
+        .w5-ledger-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+        .w5-ledger-heading h3 { font-size:16px; font-weight:700; }
+        .w5-ledger-heading span { font-size:12px; color:#171c8f; font-weight:600; }
+        .w5-ledger { width:100%; border-collapse:collapse; table-layout:fixed; }
+        .w5-ledger caption { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+        .w5-ledger thead { display:none; }
+        .w5-ledger tbody { display:block; }
+        .w5-ledger-group { display:block; background:#f1f4f8; border-block:1px solid #dce2eb; }
+        .w5-ledger-group th { display:block; padding:10px 14px; text-align:left; font-size:13px; font-weight:600; }
+        .w5-ledger-group span { color:#556276; font-size:12px; font-weight:400; margin-left:8px; }
+        .w5-ledger-row { display:grid; grid-template-columns:minmax(0,1fr) 60px 58px; gap:12px; align-items:center; padding:14px; border-bottom:1px solid #dce2eb; }
+        .w5-ledger-row.out-of-stock { background:#f5f7fa; }
+        .w5-ledger-name { min-width:0; }
+        .w5-ledger-name strong { display:block; font-size:14px; font-weight:600; overflow-wrap:anywhere; line-height:1.55; }
+        .out-of-stock .w5-ledger-name strong { color:#556276; }
+        .w5-mobile-meta { display:flex; gap:8px; flex-wrap:wrap; margin-top:4px; font-size:12px; color:#556276; }
+        .w5-ledger-row .w5-desktop-cell { display:none; }
+        .w5-stock-value { text-align:right; font-size:21px; font-weight:700; line-height:1.35; }
+        .w5-stock-value small { display:block; font-size:12px; font-weight:400; color:#556276; }
+        .w5-status { display:inline-flex; align-items:center; gap:5px; font-size:12px; white-space:nowrap; }
+        .w5-status::before { content:''; width:5px; height:5px; border-radius:50%; background:currentColor; }
+        .w5-status.good { color:#08613c; }
+        .w5-status.low { color:#854d0e; }
+        .w5-status.out { color:#b42335; }
+        .w5-withdraw-action { width:58px; padding:0 10px; border:1px solid #efd0c0; border-radius:7px; background:#fff3eb; color:#c44300; font-size:13px; font-weight:600; }
+        .w5-withdraw-action:hover:not(:disabled) { background:#ffe7d8; }
+        .w5-withdraw-action:disabled { background:#e6eaf0; border-color:#e6eaf0; color:#5d6879; cursor:not-allowed; }
+        .w5-inline-row { display:block; }
+        .w5-inline-row > td { display:block; padding:0; }
+        .w5-inline-stepper { padding:20px; background:#f4f5ff; border-bottom:1px solid #c4caef; }
+        .w5-inline-heading { display:flex; justify-content:space-between; gap:16px; margin-bottom:14px; }
+        .w5-inline-heading h4 { font-size:15px; font-weight:600; }
+        .w5-inline-heading p { color:#556276; font-size:12px; margin-top:4px; }
+        .w5-inline-quantity label { display:block; font-size:12px; font-weight:600; margin-bottom:7px; }
+        .w5-inline-counter { display:grid; grid-template-columns:48px minmax(0,1fr) 48px; gap:8px; max-width:340px; }
+        .w5-inline-counter button, .w5-inline-counter input { height:48px; border:1px solid #b4bfd8; border-radius:7px; background:white; color:#171c8f; font-size:23px; text-align:center; font-weight:700; min-width:0; }
+        .w5-inline-counter button { min-width:44px; }
+        .w5-inline-increments { display:flex; gap:7px; margin-top:10px; flex-wrap:wrap; }
+        .w5-inline-increments button { background:#fff; border:1px solid #c9d1e0; border-radius:7px; color:#36445a; padding:0 14px; }
+        .w5-inline-remaining { display:flex; justify-content:space-between; gap:12px; border-top:1px solid #d3d8ee; margin:16px 0; padding-top:13px; max-width:450px; font-size:13px; }
+        .w5-inline-remaining strong { color:#171c8f; }
+        .w5-inline-actions { display:flex; gap:10px; }
+        .w5-inline-actions button { flex:1; max-width:220px; min-height:46px; padding:0 14px; border-radius:8px; font-weight:600; background:#f2f4f8; color:#36445a; border:1px solid #c7d0de; }
+        .w5-inline-actions .w5-confirm-withdraw { background:#171c8f; border-color:#171c8f; color:white; }
+        .w5-inline-stepper button:disabled { opacity:.55; cursor:not-allowed; }
+        .w5-empty { padding:48px 16px; border:0; border-block:1px solid #dce2eb; border-radius:0!important; color:#556276; text-align:center; }
+        .w5-form { max-width:680px; }
+        .w5-form-types { background:transparent; padding:0; margin-bottom:25px; }
+        .w5-form-types button { background:#f2f4f8; border:1px solid #dce2eb; min-height:48px; box-shadow:none; }
+        .w5-form-panel { border:0; padding:0; background:#fff; }
+        .w5-form-panel > div + div { margin-top:19px; }
+        .w5-pick-row, .w5-manage-row { border:0; border-bottom:1px solid #dce2eb; border-radius:0!important; padding:19px 0; box-shadow:none; }
+        .w5-pick-row button { border-radius:8px; }
+        .w5-summary { display:flex; flex-wrap:wrap; gap:18px; padding:18px 0; border-block:1px solid #dce2eb; }
+        .w5-summary > div { flex:1; min-width:115px; border:0; padding:0; background:transparent; }
+        .w5-summary > div i { display:none; }
+        .w5-summary > div p { font-size:24px; margin-top:4px; }
+        .w5-low-stock { border-radius:0!important; box-shadow:none; }
+        .w5-history { border:0; border-radius:0!important; box-shadow:none; }
+        .w5-history ul { max-height:none; overflow:visible; border-top:1px solid #dce2eb; }
+        .w5-history li { padding:18px 0; border-bottom:1px solid #dce2eb; }
+        .w5-history .truncate, .w5-manage-row .truncate { white-space:normal; overflow:visible; overflow-wrap:anywhere; }
+        .w5-manage-add { background:#f5f7fa; border:0; padding:20px; margin-bottom:26px; border-radius:10px!important; }
+        .w5-manage-inputs > div, .w5-manage-inputs > input { min-width:0; }
+        .w5-manage-inputs > input { width:0; }
+        .w5-manage-list { border:0; border-radius:0!important; box-shadow:none; }
+        .w5-manage-list > div:first-child { padding:0 0 16px; background:white; border:0; }
+        .w5-manage-list > ul { max-height:none; overflow:visible; }
+        .w5-manage-row { gap:16px; }
+        .w5-manage-row .w5-edit-tag { display:inline-flex; min-height:44px; align-items:center; padding:0 10px; border:0; }
+        .w5-bottom-nav { min-height:70px; max-width:none; border-top:1px solid #cbd3e0; padding-bottom:env(safe-area-inset-bottom); }
+        .w5-bottom-nav > button { max-width:240px; min-height:70px; flex-direction:row; justify-content:center; gap:8px; font-size:13px; border-top:3px solid transparent; }
+        .w5-bottom-nav > button[aria-current="page"] { border-top-color:#171c8f; background:#f5f6ff; color:#171c8f; }
+        .w5-bottom-nav > button > .absolute.top-0 { display:none; }
+        @media (min-width:1024px) {
+            body.akra-global-switcher-visible .w5-bottom-nav { left:240px; }
         }
+        @media (max-width:640px) {
+            .w5-manage-add .w5-manage-inputs { display:grid; grid-template-columns:minmax(0,1fr) auto; }
+            .w5-manage-inputs > div { grid-column:1 / -1; }
+            .w5-manage-inputs > input { width:100%; }
+        }
+        .w5-dialog-overlay { backdrop-filter:none; background:#111b3099; padding:18px; }
+        .w5-dialog-overlay > .bg-white { border-radius:14px; padding:25px; max-width:440px; width:100%; max-height:calc(100dvh - 36px); overflow-y:auto; overscroll-behavior:contain; box-shadow:0 18px 50px #00000030; }
+        .w5-dialog-overlay input, .w5-dialog-overlay select { min-height:48px; font-size:14px; border-radius:8px; }
+        .w5-dialog-overlay .text-slate-400 { color:#556276; }
+        .w5-dialog-overlay [class~="text-[10px]"] { font-size:12px; }
+        @media(min-width:960px) {
+            .w5-filter-surface { display:grid; grid-template-columns:minmax(280px,420px) minmax(0,1fr); gap:18px; align-items:start; }
+            .w5-filter-surface > .category-scroll { margin-top:0; }
+            .w5-ledger thead { display:table-header-group; }
+            .w5-ledger tbody { display:table-row-group; }
+            .w5-ledger thead th { padding:13px 14px; background:#f3f5f9; border-block:1px solid #dce2eb; color:#556276; text-align:left; font-size:12px; font-weight:600; }
+            .w5-ledger thead th:first-child { width:32%; }
+            .w5-ledger thead th:nth-child(2) { width:20%; }
+            .w5-ledger thead th:nth-child(3) { width:9%; }
+            .w5-ledger thead th:nth-child(4) { width:12%; text-align:right; }
+            .w5-ledger thead th:nth-child(5) { width:17%; }
+            .w5-ledger thead th:last-child { width:10%; text-align:right; }
+            .w5-ledger-group, .w5-ledger-row, .w5-inline-row { display:table-row; }
+            .w5-ledger-group th, .w5-inline-row > td { display:table-cell; }
+            .w5-ledger-row td, .w5-ledger-row .w5-desktop-cell { display:table-cell; padding:15px 14px; border-bottom:1px solid #dce2eb; vertical-align:middle; font-size:13px; }
+            .w5-ledger-row .w5-stock-value { font-size:20px; }
+            .w5-ledger-row td:last-child { text-align:right; }
+            .w5-mobile-meta, .w5-stock-value small { display:none; }
+            .w5-inline-stepper { padding:20px 24px; }
+            .w5-inline-body { display:grid; grid-template-columns:350px minmax(0,1fr); gap:35px; }
+            .w5-inline-remaining { margin:0 0 16px; padding:0; border:0; }
+        }
+        @media(max-width:640px) {
+            .w5-topbar-inner { width:calc(100% - 28px); min-height:70px; gap:8px; }
+            .w5-topbar { min-height:70px; }
+            .w5-topbar .w5-brand-icon { width:36px; height:36px; font-size:16px; }
+            .w5-topbar h1 { font-size:14px; }
+            .w5-operator { min-height:34px; padding-inline:8px; }
+            .w5-main { width:calc(100% - 28px); padding:20px 0 100px; }
+            .w5-page-heading h2 { font-size:21px; }
+            .w5-mode-switcher button { flex:1; padding:0 8px; font-size:13px; }
+            .w5-ledger-row { grid-template-columns:minmax(0,1fr) 54px 55px; gap:9px; padding:13px 10px; }
+            .w5-ledger-name strong { font-size:13px; }
+            .w5-stock-value { font-size:20px; }
+            .w5-withdraw-action { width:55px; }
+            .w5-inline-stepper { padding:16px 13px; }
+            .w5-inline-actions button { max-width:none; padding-inline:9px; }
+            .w5-inline-increments { gap:6px; }
+            .w5-inline-increments button { flex:1; padding-inline:8px; }
+            .w5-summary { gap:12px; }
+            .w5-summary > div { min-width:85px; }
+            .w5-summary > div p { font-size:22px; }
+            .w5-history li { align-items:flex-start; gap:9px; }
+            .w5-history li > div:last-child { flex-direction:column; align-items:flex-end; gap:4px; }
+            .w5-manage-row { flex-direction:column; align-items:stretch; gap:10px; }
+            .w5-manage-row > div:last-child { justify-content:flex-start; gap:8px; }
+            .w5-bottom-nav > button { flex-direction:column; gap:3px; font-size:12px; }
+            .w5-dialog-overlay > .bg-white { padding:20px; }
+        }
+        @media(prefers-reduced-motion:reduce) { .w5-app *, .pulse-dot { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+
     </style>
 </head>
 <body class="text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-900 bg-white">
@@ -123,7 +258,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20261002.01";
+    var CURRENT_VERSION = "20261003.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -421,13 +556,14 @@
 
         <!-- ==================== TAB 1: TRANSACTION (เบิก-รับ แคตตาล็อก) ==================== -->
         <section v-show="activeTab === 'transaction'" class="space-y-3.5 min-w-0 w-full">
+            <div class="w5-page-heading"><h2>เบิก-รับสินค้า</h2><p>คลัง W5 · {{ loggedInUser }}</p></div>
             
             <!-- Quick Mode Switcher (List-First vs Manual Form) -->
             <div class="w5-mode-switcher flex p-1 rounded-xl gap-1 shadow-inner text-xs font-bold w-full">
-                <button type="button" @click="txViewMode = 'catalog'" :class="txViewMode === 'catalog' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
+                <button type="button" @click="txViewMode = 'catalog'" :aria-pressed="txViewMode === 'catalog'" :class="txViewMode === 'catalog' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
                     <i class="fas fa-boxes"></i> รายการสินค้าคลัง
                 </button>
-                <button type="button" @click="txViewMode = 'form'" :class="txViewMode === 'form' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
+                <button type="button" @click="txViewMode = 'form'" :aria-pressed="txViewMode === 'form'" :class="txViewMode === 'form' ? 'bg-white text-[#171c8f] shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="flex-1 py-2 rounded-lg transition-all flex items-center justify-center gap-1.5">
                     <i class="fas fa-edit"></i> ฟอร์มเบิก-รับ
                 </button>
             </div>
@@ -439,55 +575,60 @@
                 <div class="w5-filter-surface bg-white p-3 sm:p-3.5 rounded-2xl border border-slate-200/80 shadow-sm space-y-2.5 min-w-0 w-full">
                     <div class="relative flex items-center">
                         <i class="fas fa-search absolute left-3.5 text-slate-400 text-sm pointer-events-none"></i>
-                        <input type="text" v-model="searchTransactionList" placeholder="พิมพ์ชื่อสินค้า หรือ ค้นหา..." class="w-full bg-slate-50 border border-slate-300 focus:border-[#171c8f] focus:bg-white rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm outline-none transition focus:ring-2 focus:ring-indigo-100 font-medium">
-                        <button v-if="searchTransactionList" @click="searchTransactionList = ''" class="absolute right-3 text-slate-400 hover:text-slate-600">
+                        <input type="text" v-model="searchTransactionList" aria-label="ค้นหาสินค้าคลัง" placeholder="พิมพ์ชื่อสินค้า หรือ ค้นหา..." class="w-full bg-slate-50 border border-slate-300 focus:border-[#171c8f] focus:bg-white rounded-xl pl-9 pr-8 py-2.5 text-xs sm:text-sm outline-none transition focus:ring-2 focus:ring-indigo-100 font-medium">
+                        <button v-if="searchTransactionList" aria-label="ล้างคำค้นหา" @click="searchTransactionList = ''" class="absolute right-3 text-slate-400 hover:text-slate-600">
                             <i class="fas fa-times-circle"></i>
                         </button>
                     </div>
 
                     <!-- Category Scroll Pills -->
                     <div class="category-scroll pt-0.5">
-                        <button type="button" v-for="cat in categoryList" :key="cat.id" @click="selectedCategory = cat.id" :class="selectedCategory === cat.id ? 'bg-[#171c8f] text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold'" class="px-2.5 sm:px-3 py-1 rounded-full text-xs shrink-0 transition-all">
+                        <button type="button" v-for="cat in categoryList" :key="cat.id" @click="selectedCategory = cat.id" :aria-pressed="selectedCategory === cat.id" :class="selectedCategory === cat.id ? 'bg-[#171c8f] text-white font-bold shadow-sm' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold'" class="px-2.5 sm:px-3 py-1 rounded-full text-xs shrink-0 transition-all">
                             {{ cat.name }}
                         </button>
                     </div>
                 </div>
 
                 <!-- Section Title & Item Count -->
-                <div class="flex items-center justify-between px-1">
-                    <span class="text-xs font-bold text-slate-600 uppercase tracking-wide">สินค้าพร้อมเบิก</span>
-                    <span class="text-[11px] font-bold text-[#171c8f] bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                <div class="w5-ledger-heading">
+                    <h3>สินค้าพร้อมเบิก</h3>
+                    <span>
                         {{ filteredCatalogProducts.length }} รายการ
                     </span>
                 </div>
 
-                <!-- Product List Cards -->
-                <div v-if="filteredCatalogProducts.length > 0" class="w5-catalog-grid">
-                    <div v-for="product in filteredCatalogProducts" :key="product.id" :class="{'opacity-60 bg-slate-100/70': product.stock <= 0}" class="w5-product-card bg-white border border-slate-200 rounded-2xl p-3 sm:p-3.5 shadow-sm flex items-center justify-between gap-2 sm:gap-3 hover:border-indigo-200 transition">
-                        <div class="w5-product-copy flex-1 min-w-0">
-                            <h3 class="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-2">{{ product.name }}</h3>
-                            <div class="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
-                                <span :class="getProductCategoryClass(product)" class="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-                                    <i v-if="getProductCategory(product) === 'chilled'" class="fas fa-snowflake text-sky-500 text-[9px]"></i>
-                                    {{ getProductCategoryName(product) }}
-                                </span>
-                                <span v-if="product.unit" class="text-[9px] sm:text-[10px] text-slate-400 font-medium">หน่วย: {{ product.unit }}</span>
-                            </div>
-                        </div>
-                        <div class="w5-product-actions flex items-center gap-2 sm:gap-3 shrink-0">
-                            <div class="text-right">
-                                <span class="block text-[9px] sm:text-[10px] font-semibold text-slate-400">คงเหลือ</span>
-                                <div class="font-extrabold text-sm sm:text-base leading-none" :class="product.stock <= 0 ? 'text-rose-600' : (product.stock < 20 ? 'text-amber-600' : 'text-emerald-600')">
-                                    {{ product.stock }} <span class="text-[10px] sm:text-xs font-normal text-slate-600">{{ product.unit || 'ชิ้น' }}</span>
-                                </div>
-                            </div>
-                            <button type="button" @click="openWithdrawStepper(product)" :disabled="product.stock <= 0" class="bg-[#e35205] hover:bg-[#c44300] active:scale-95 disabled:opacity-40 disabled:pointer-events-none text-white text-xs font-extrabold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl shadow-md transition flex items-center gap-1">
-                                <i class="fas fa-arrow-up text-[10px]"></i> <span>เบิก</span>
-                            </button>
-                        </div>
-                    </div>
+                <div v-if="filteredCatalogProducts.length > 0">
+                    <table class="w5-ledger">
+                        <caption>รายการสินค้าคลัง W5</caption>
+                        <thead><tr><th scope="col">สินค้า</th><th scope="col">หมวดหมู่</th><th scope="col">หน่วย</th><th scope="col">คงเหลือ</th><th scope="col">สถานะ</th><th scope="col">เบิก</th></tr></thead>
+                        <tbody v-for="group in groupedCatalogProducts" :key="group.id">
+                            <tr class="w5-ledger-group"><th colspan="6" scope="colgroup">{{ group.name }}<span>{{ group.products.length }} รายการ</span></th></tr>
+                            <template v-for="product in group.products" :key="product.id">
+                                <tr class="w5-ledger-row" :class="{'out-of-stock': product.stock <= 0}">
+                                    <td class="w5-ledger-name"><strong>{{ product.name }}</strong><div class="w5-mobile-meta"><span>หน่วย: {{ product.unit || 'ชิ้น' }}</span><span class="w5-status" :class="catalogStockState(product).kind">{{ catalogStockState(product).text }}</span></div></td>
+                                    <td class="w5-desktop-cell">{{ getProductCategoryName(product) }}</td>
+                                    <td class="w5-desktop-cell">{{ product.unit || 'ชิ้น' }}</td>
+                                    <td class="w5-stock-value">{{ product.stock }}<small>{{ product.unit || 'ชิ้น' }}</small></td>
+                                    <td class="w5-desktop-cell"><span class="w5-status" :class="catalogStockState(product).kind">{{ catalogStockState(product).text }}</span></td>
+                                    <td><button type="button" class="w5-withdraw-action" :data-product-id="product.id" @click="openWithdrawStepper(product)" :disabled="product.stock <= 0 || isSubmitting" :aria-label="'เบิก ' + product.name" :aria-expanded="stepperModal.show && stepperModal.product.id === product.id">เบิก</button></td>
+                                </tr>
+                                <tr v-if="stepperModal.show && stepperModal.product.id === product.id" class="w5-inline-row"><td colspan="6">
+                                    <section class="w5-inline-stepper" :aria-label="'เบิก ' + product.name">
+                                        <div class="w5-inline-heading"><div><h4>ระบุจำนวนที่ต้องการเบิก · {{ product.name }}</h4><p>คงเหลือในระบบ: {{ product.stock }} {{ product.unit || 'ชิ้น' }}</p></div></div>
+                                        <div class="w5-inline-body"><div class="w5-inline-quantity">
+                                            <label :for="'withdraw-qty-' + product.id">จำนวนเบิก ({{ product.unit || 'ชิ้น' }})</label>
+                                            <div class="w5-inline-counter"><button type="button" @click="stepperMinus" aria-label="ลดจำนวน">−</button><input :id="'withdraw-qty-' + product.id" type="number" v-model.number="stepperModal.qty" @input="updateModalCalculation" min="1" :max="product.stock"><button type="button" @click="stepperPlus" aria-label="เพิ่มจำนวน">+</button></div>
+                                            <div class="w5-inline-increments"><button type="button" @click="stepperAdd(1)">+1</button><button type="button" @click="stepperAdd(5)">+5</button><button type="button" @click="stepperAdd(10)">+10</button><button type="button" @click="stepperSetAll">เบิกหมด</button></div>
+                                        </div><div><div class="w5-inline-remaining"><span>คงเหลือหลังเบิก:</span><strong>{{ stepperRemainingStock }} {{ product.unit || 'ชิ้น' }}</strong></div>
+                                            <div class="w5-inline-actions"><button type="button" @click="closeWithdrawStepper" :disabled="isSubmitting">ยกเลิก</button><button type="button" class="w5-confirm-withdraw" @click="confirmQuickWithdraw" :disabled="isSubmitting || stepperModal.qty <= 0"><i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i> ยืนยันตัดสต็อก</button></div>
+                                        </div></div>
+                                    </section>
+                                </td></tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-                <div v-else class="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center text-slate-400 space-y-1">
+                <div v-else class="w5-empty bg-white p-8 text-center space-y-1">
                     <i class="fas fa-box-open text-3xl text-slate-300 mb-1"></i>
                     <p class="text-sm font-bold text-slate-600">ไม่พบรายการสินค้า</p>
                     <p class="text-xs text-slate-400">ลองเปลี่ยนคำค้นหาหรือเลือกหมวดหมู่อื่น</p>
@@ -495,8 +636,8 @@
             </div>
 
             <!-- MODE B: CLASSIC TRANSACTION FORM (Inbound / Outbound / Pick List) -->
-            <div v-show="txViewMode === 'form'" class="space-y-4">
-                <div class="flex gap-2 p-1 bg-slate-200 rounded-xl">
+            <div v-show="txViewMode === 'form'" class="w5-form space-y-4">
+                <div class="w5-form-types flex gap-2 p-1 bg-slate-200 rounded-xl">
                     <button type="button" @click="form.type = 'out'" :class="form.type === 'out' ? 'bg-white text-rose-600 shadow-sm font-extrabold' : 'text-slate-600 font-semibold'" class="flex-1 py-2.5 rounded-lg text-xs transition flex justify-center items-center gap-1.5">
                         <i class="fas fa-arrow-up"></i> เบิกออก (-)
                     </button>
@@ -505,7 +646,7 @@
                     </button>
                 </div>
 
-                <div class="bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-3.5">
+                <div class="w5-form-panel bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-3.5">
                     <div class="relative">
                         <label class="block text-xs font-bold text-slate-700 mb-1">เลือกสินค้า <span class="text-rose-500">*</span></label>
                         <div class="relative z-30">
@@ -573,7 +714,7 @@
             </div>
 
             <div v-if="pickList.length > 0" class="space-y-3">
-                <div v-for="item in pickList" :key="item.pickId" class="bg-white p-4 border-l-4 border-amber-500 border-y border-r border-slate-200 rounded-2xl shadow-sm space-y-3">
+                <div v-for="item in pickList" :key="item.pickId" class="w5-pick-row bg-white space-y-3">
                     <div class="flex justify-between items-start gap-2">
                         <h3 class="text-sm font-bold text-slate-900 leading-snug">{{ item.productName }}</h3>
                         <span class="text-[11px] font-extrabold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 shrink-0">
@@ -619,7 +760,7 @@
             </div>
 
             <!-- KPI Cards Grid (4 Box) -->
-            <div class="grid grid-cols-2 gap-2.5">
+            <div class="w5-summary grid grid-cols-2 gap-2.5">
                 <div class="bg-white border-l-4 border-indigo-600 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
                     <div class="flex justify-between items-start text-slate-500">
                         <span class="text-[11px] font-bold">SKU ทั้งหมด</span>
@@ -651,7 +792,7 @@
             </div>
 
             <!-- Low Stock Warning Alert -->
-            <div v-if="lowStockItems.length > 0" class="bg-rose-50 border border-rose-200 rounded-2xl overflow-hidden shadow-sm">
+            <div v-if="lowStockItems.length > 0" class="w5-low-stock bg-rose-50 border border-rose-200 rounded-2xl overflow-hidden shadow-sm">
                 <div class="bg-rose-100/70 px-3.5 py-2 border-b border-rose-200 flex items-center justify-between">
                     <span class="text-xs font-extrabold text-rose-800 flex items-center gap-1.5">
                         <i class="fas fa-exclamation-circle text-rose-600"></i> แจ้งเตือนสินค้าใกล้หมด (ต่ำกว่า 20)
@@ -679,7 +820,7 @@
                     </button>
                 </div>
 
-                <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                <div class="w5-history bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <ul v-if="history.length > 0" class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
                         <li v-for="(log, index) in reversedHistory" :key="index" class="p-3 text-xs flex justify-between items-center hover:bg-slate-50 transition">
                             <div class="flex-1 pr-2 min-w-0">
@@ -719,7 +860,7 @@
             </h2>
 
             <!-- Add Product Card -->
-            <div class="bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-3 relative">
+            <div class="w5-manage-add bg-white p-4 border border-slate-200 rounded-2xl shadow-sm space-y-3 relative">
                 <div class="flex items-center justify-between">
                     <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
                         <i class="fas fa-plus-circle text-emerald-500"></i> เพิ่มสินค้าใหม่เข้า W5
@@ -730,7 +871,7 @@
                 </div>
 
                 <div class="relative">
-                    <div class="flex gap-2">
+                    <div class="w5-manage-inputs flex gap-2">
                         <div class="relative flex-[2]">
                             <input type="text" v-model="newProductName" @input="onMasterSearchInput" @focus="onMasterSearchInput" class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-[#171c8f] p-2.5 rounded-xl text-xs outline-none transition font-medium" placeholder="พิมพ์ชื่อหรือค้นหาจาก Product Master...">
                             <span v-if="isSearchingMaster" class="absolute right-3 top-2.5 text-indigo-500 text-xs"><i class="fas fa-circle-notch fa-spin"></i></span>
@@ -764,7 +905,7 @@
             </div>
 
             <!-- Product Master List -->
-            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-2">
+            <div class="w5-manage-list bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden space-y-2">
                 <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-col gap-2">
                     <span class="text-xs font-bold text-slate-600">รายการสินค้าทั้งหมด ({{ products.length }})</span>
                     <div class="relative">
@@ -774,15 +915,15 @@
                 </div>
 
                 <ul v-if="filteredManageProducts.length > 0" class="divide-y divide-slate-100 max-h-96 overflow-y-auto">
-                    <li v-for="product in filteredManageProducts" :key="product.id" class="p-3 flex justify-between items-center text-xs hover:bg-slate-50 transition">
+                    <li v-for="product in filteredManageProducts" :key="product.id" class="w5-manage-row p-3 flex justify-between items-center text-xs hover:bg-slate-50 transition">
                         <div class="flex-1 pr-2 min-w-0">
                             <p class="font-bold text-slate-800 leading-tight truncate">{{ product.name }}</p>
                             <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                                <span :class="getProductCategoryClass(product)" class="text-[9px] font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 cursor-pointer hover:opacity-80 transition" @click="openEditModal(product)" title="คลิกเพื่อแก้ไขแท็ก">
+                                <button type="button" :class="getProductCategoryClass(product)" class="w5-edit-tag text-xs font-semibold rounded-md gap-1" @click="openEditModal(product)" title="คลิกเพื่อแก้ไขแท็ก">
                                     <i v-if="getProductCategory(product) === 'chilled'" class="fas fa-snowflake text-sky-500 text-[8px]"></i>
                                     {{ getProductCategoryName(product) }}
                                     <i class="fas fa-pen text-[7px] opacity-50 ml-0.5"></i>
-                                </span>
+                                </button>
                                 <span class="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">คงเหลือ: {{ product.stock }} {{ product.unit }}</span>
                             </div>
                         </div>
@@ -810,12 +951,12 @@
 
     <!-- Bottom Navigation Bar -->
     <nav class="w5-bottom-nav fixed bottom-0 left-0 right-0 mx-auto bg-white border-t border-slate-200 flex justify-around text-[11px] font-bold text-slate-500 shadow-2xl z-30">
-        <button type="button" @click="activeTab = 'transaction'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'transaction'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+        <button type="button" @click="activeTab = 'transaction'" :aria-current="activeTab === 'transaction' ? 'page' : null" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'transaction'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
             <i class="fas fa-boxes text-base"></i>
             <span>เบิก-รับ</span>
             <div v-if="activeTab === 'transaction'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
-        <button type="button" @click="activeTab = 'picklist'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'picklist'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+        <button type="button" @click="activeTab = 'picklist'" :aria-current="activeTab === 'picklist' ? 'page' : null" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'picklist'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
             <div class="relative">
                 <i class="fas fa-clipboard-check text-base"></i>
                 <span v-if="pickList.length > 0" class="absolute -top-1.5 -right-2.5 bg-rose-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center border border-white">{{ pickList.length }}</span>
@@ -823,12 +964,12 @@
             <span>ใบจัด</span>
             <div v-if="activeTab === 'picklist'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
-        <button type="button" @click="activeTab = 'dashboard'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'dashboard'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+        <button type="button" @click="activeTab = 'dashboard'" :aria-current="activeTab === 'dashboard' ? 'page' : null" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'dashboard'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
             <i class="fas fa-chart-pie text-base"></i>
             <span>แดชบอร์ด</span>
             <div v-if="activeTab === 'dashboard'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
         </button>
-        <button v-if="isAdmin" type="button" @click="activeTab = 'manage'" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'manage'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
+        <button v-if="isAdmin" type="button" @click="activeTab = 'manage'" :aria-current="activeTab === 'manage' ? 'page' : null" :class="{'text-[#171c8f] bg-indigo-50/50': activeTab === 'manage'}" class="flex-1 py-3 flex flex-col items-center gap-1 transition relative">
             <i class="fas fa-cog text-base"></i>
             <span>จัดการ</span>
             <div v-if="activeTab === 'manage'" class="absolute top-0 w-8 h-1 bg-[#171c8f] rounded-b-full"></div>
@@ -837,60 +978,9 @@
 
     <!-- ==================== MODALS & OVERLAYS ==================== -->
 
-    <!-- Quick Stepper Withdrawal Modal (1-Tap Fast Withdraw) -->
-    <transition name="fade">
-        <div v-if="stepperModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 z-[55]">
-            <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-4">
-                <div class="w-10 h-1 bg-slate-300 rounded-full mx-auto sm:hidden mb-2"></div>
-                <div class="border-b border-slate-100 pb-3">
-                    <span class="text-xs font-extrabold text-[#171c8f] uppercase tracking-wider">ระบุจำนวนที่ต้องการเบิก</span>
-                    <h3 class="text-base font-extrabold text-slate-900 mt-1 leading-snug">{{ stepperModal.product ? stepperModal.product.name : '' }}</h3>
-                    <div class="inline-flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 mt-2">
-                        <span>คงเหลือในระบบ:</span>
-                        <strong class="text-[#e35205]">{{ stepperModal.product ? stepperModal.product.stock : 0 }} {{ stepperModal.product ? (stepperModal.product.unit || 'ชิ้น') : '' }}</strong>
-                    </div>
-                </div>
-
-                <!-- Stepper Counter -->
-                <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-700">จำนวนเบิก ({{ stepperModal.product ? (stepperModal.product.unit || 'ชิ้น') : 'ชิ้น' }})</label>
-                    <div class="grid grid-cols-[52px_1fr_52px] gap-2 h-12">
-                        <button type="button" @click="stepperMinus" class="bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 text-[#171c8f] font-black text-xl border border-slate-300 rounded-xl flex items-center justify-center transition">−</button>
-                        <input type="number" v-model.number="stepperModal.qty" @input="updateModalCalculation" min="1" :max="stepperModal.product ? stepperModal.product.stock : 1" class="w-full text-center text-xl font-black text-slate-900 border border-slate-300 focus:border-[#171c8f] rounded-xl outline-none transition">
-                        <button type="button" @click="stepperPlus" class="bg-slate-100 hover:bg-indigo-50 hover:border-indigo-300 text-[#171c8f] font-black text-xl border border-slate-300 rounded-xl flex items-center justify-center transition">+</button>
-                    </div>
-
-                    <!-- Quick Increments -->
-                    <div class="grid grid-cols-4 gap-1.5 pt-1">
-                        <button type="button" @click="stepperAdd(1)" class="bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-[#171c8f] font-bold text-xs py-1.5 rounded-lg transition">+1</button>
-                        <button type="button" @click="stepperAdd(5)" class="bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-[#171c8f] font-bold text-xs py-1.5 rounded-lg transition">+5</button>
-                        <button type="button" @click="stepperAdd(10)" class="bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 hover:text-[#171c8f] font-bold text-xs py-1.5 rounded-lg transition">+10</button>
-                        <button type="button" @click="stepperSetAll" class="bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-1.5 rounded-lg transition">เบิกหมด</button>
-                    </div>
-                </div>
-
-                <!-- Stock After Calculation -->
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 flex justify-between items-center text-xs font-bold text-slate-700">
-                    <span>คงเหลือหลังเบิก:</span>
-                    <span :class="stepperRemainingStock <= 0 ? 'text-rose-600 font-black' : 'text-emerald-600 font-black'" class="text-sm">
-                        {{ stepperRemainingStock }} {{ stepperModal.product ? (stepperModal.product.unit || 'ชิ้น') : '' }}
-                    </span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                    <button type="button" @click="closeWithdrawStepper" :disabled="isSubmitting" class="bg-slate-100 text-slate-700 font-bold py-3 rounded-xl text-xs hover:bg-slate-200 transition">ยกเลิก</button>
-                    <button type="button" @click="confirmQuickWithdraw" :disabled="isSubmitting || stepperModal.qty <= 0" class="bg-[#171c8f] hover:bg-[#101466] text-white font-extrabold py-3 rounded-xl text-xs shadow-lg transition flex items-center justify-center gap-1.5">
-                        <i v-if="isSubmitting" class="fas fa-circle-notch fa-spin"></i>
-                        <span>ยืนยันตัดสต็อก</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </transition>
-
     <!-- Pick Modal (หยิบสินค้าจริง) -->
     <transition name="fade">
-        <div v-if="pickModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+        <div v-if="pickModal.show" class="w5-dialog-overlay fixed inset-0 flex items-center justify-center p-4 z-[55]">
             <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3.5 text-center">
                 <div class="w-12 h-12 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto text-xl">
                     <i class="fas fa-box-open"></i>
@@ -922,7 +1012,7 @@
 
     <!-- Adjust Stock Modal (Admin) -->
     <transition name="fade">
-        <div v-if="adjustModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+        <div v-if="adjustModal.show" class="w5-dialog-overlay fixed inset-0 flex items-center justify-center p-4 z-[55]">
             <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-4">
                 <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
                     <i class="fas fa-calculator text-purple-600 text-lg"></i>
@@ -955,7 +1045,7 @@
 
     <!-- Edit Product & Tag Modal -->
     <transition name="fade">
-        <div v-if="editModal.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+        <div v-if="editModal.show" class="w5-dialog-overlay fixed inset-0 flex items-center justify-center p-4 z-[55]">
             <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3.5">
                 <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
                     <i class="fas fa-tags text-[#171c8f] text-lg"></i>
@@ -993,7 +1083,7 @@
 
     <!-- General Message Box / Alert Modal -->
     <transition name="fade">
-        <div v-if="messageBox.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[65]">
+        <div v-if="messageBox.show" class="w5-dialog-overlay fixed inset-0 flex items-center justify-center p-4 z-[65]">
             <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3 text-center">
                 <div class="w-12 h-12 rounded-full flex items-center justify-center mx-auto text-xl" :class="messageBox.isError ? 'bg-rose-100 text-rose-600' : 'bg-emerald-100 text-emerald-600'">
                     <i :class="messageBox.isError ? 'fas fa-exclamation-circle' : 'fas fa-check-circle'"></i>
@@ -1009,7 +1099,7 @@
 
     <!-- General Confirm Dialog -->
     <transition name="fade">
-        <div v-if="confirmDialog.show" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[65]">
+        <div v-if="confirmDialog.show" class="w5-dialog-overlay fixed inset-0 flex items-center justify-center p-4 z-[65]">
             <div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl space-y-3.5">
                 <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
                     <i :class="confirmDialog.iconClass"></i> {{ confirmDialog.title }}
@@ -1028,7 +1118,7 @@
 
     <!-- Transaction Confirmation Modal -->
     <transition name="fade">
-        <div v-if="showModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[55]">
+        <div v-if="showModal" class="w5-dialog-overlay fixed inset-0 flex items-center justify-center p-4 z-[55]">
             <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl text-center space-y-4">
                 <div :class="form.type === 'in' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'" class="w-14 h-14 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
                     <i :class="form.type === 'in' ? 'fas fa-arrow-down' : 'fas fa-arrow-up'"></i>
@@ -1159,6 +1249,13 @@
                 }
                 return list;
             },
+            groupedCatalogProducts() {
+                return this.categoryList.filter(category => category.id !== 'all').map(category => ({
+                    id: category.id,
+                    name: category.name,
+                    products: this.filteredCatalogProducts.filter(product => this.getProductCategory(product) === category.id)
+                })).filter(group => group.products.length > 0);
+            },
             filteredTransactionProducts() {
                 if (!this.searchTransaction) return this.products;
                 return this.products.filter(p => p.name.toLowerCase().includes(this.searchTransaction.toLowerCase()));
@@ -1184,7 +1281,11 @@
             }
         },
         watch: {
+            searchTransactionList() { this.closeWithdrawStepper(false); },
+            selectedCategory() { this.closeWithdrawStepper(false); },
+            txViewMode() { this.closeWithdrawStepper(false); },
             activeTab(newTab) {
+                this.closeWithdrawStepper(false);
                 this.searchDashboard = ''; this.searchTransaction = ''; this.searchManage = ''; this.searchTransactionList = '';
                 this.showDropdown = false; this.form.productId = ''; this.form.qty = null; this.form.type = 'out';
                 if(newTab === 'dashboard') {
@@ -1388,19 +1489,34 @@
             selectTransactionProduct(product) { this.form.productId = product.id; this.searchTransaction = product.name; this.showDropdown = false; },
             clearSelection() { this.form.productId = ''; this.searchTransaction = ''; this.showDropdown = true; },
             quickWithdraw(product) { this.openWithdrawStepper(product); },
+
+            catalogStockState(product) {
+                return product.stock <= 0 ? { kind: 'out', text: 'หมดสต็อก' }
+                    : product.stock < 20 ? { kind: 'low', text: 'ใกล้หมด' }
+                    : { kind: 'good', text: 'พร้อมเบิก' };
+            },
             
             // -------- 1-Tap Quick Withdrawal Stepper Modal --------
             openWithdrawStepper(product) {
-                if (!product || product.stock <= 0) return;
+                if (!product || product.stock <= 0 || this.isSubmitting) return;
                 this.stepperModal = {
                     show: true,
                     product: product,
                     qty: 1
                 };
+                this.$nextTick?.(() => {
+                    const input = document.querySelector('.w5-inline-stepper input');
+                    input?.focus({ preventScroll: true });
+                    input?.closest('.w5-inline-stepper')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                });
             },
-            closeWithdrawStepper() {
+            closeWithdrawStepper(restoreFocus = true) {
+                const productId = this.stepperModal.product?.id;
                 this.stepperModal.show = false;
                 this.stepperModal.product = null;
+                if (restoreFocus !== false && productId != null) this.$nextTick?.(() => {
+                    [...document.querySelectorAll('.w5-withdraw-action')].find(button => button.dataset.productId === String(productId))?.focus({ preventScroll: true });
+                });
             },
             updateModalCalculation() {
                 if (!this.stepperModal.product) return;
