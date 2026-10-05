@@ -338,6 +338,57 @@ async function runWorkflowTests() {
   assert.strictEqual(instance.stepperModal.qty, 1);
   assert.strictEqual(instance.stepperRemainingStock, 49);
 
+  instance.stepperModal.qty = '';
+  instance.updateModalCalculation();
+  assert.strictEqual(instance.stepperModal.qty, '', 'Deleting the quantity must leave the input empty while editing');
+  assert.strictEqual(instance.stepperRemainingStock, 50);
+  const requestsBeforeInvalidQuantity = capturedCalls.length;
+  for (const invalidQty of ['', null, NaN, 0, -1, 51, 'invalid']) {
+    instance.stepperModal.qty = invalidQty;
+    await instance.confirmQuickWithdraw();
+    assert.strictEqual(capturedCalls.length, requestsBeforeInvalidQuantity, 'Invalid quantity must dispatch no request');
+    assert.strictEqual(targetProduct.stock, 50, 'Invalid quantity must preserve stock');
+    assert.strictEqual(instance.history.length, 0, 'Invalid quantity must preserve history');
+    assert.strictEqual(instance.isSubmitting, false);
+    assert.strictEqual(instance.messageBox.show, true);
+  }
+  instance.messageBox.show = false;
+  instance.stepperModal.qty = 2;
+  instance.updateModalCalculation();
+  assert.strictEqual(instance.stepperModal.qty, 2, 'A replacement quantity can start with 2');
+  assert.strictEqual(instance.stepperRemainingStock, 48);
+  instance.stepperModal.qty = '';
+  instance.stepperMinus();
+  assert.strictEqual(instance.stepperModal.qty, '', 'Minus must not invent a quantity after clearing');
+  instance.stepperPlus();
+  assert.strictEqual(instance.stepperModal.qty, 1, 'Plus after clearing must produce numeric 1');
+  instance.stepperPlus();
+  assert.strictEqual(instance.stepperModal.qty, 2, 'Another plus after clearing must produce numeric 2');
+  for (const amount of [1, 5, 10]) {
+    instance.stepperModal.qty = '';
+    instance.stepperAdd(amount);
+    assert.strictEqual(instance.stepperModal.qty, amount);
+  }
+  instance.stepperModal.qty = '';
+  instance.stepperSetAll();
+  assert.strictEqual(instance.stepperModal.qty, 50);
+  instance.stepperPlus();
+  assert.strictEqual(instance.stepperModal.qty, 50, 'Plus must respect stock');
+  instance.stepperAdd(10);
+  assert.strictEqual(instance.stepperModal.qty, 50, 'Shortcut additions must respect stock');
+  instance.stepperModal.qty = 51;
+  instance.updateModalCalculation();
+  assert.strictEqual(instance.stepperModal.qty, 50, 'Entered quantities remain bounded by stock');
+  for (const belowMinimum of [0, -1]) {
+    instance.stepperModal.qty = belowMinimum;
+    instance.updateModalCalculation();
+    assert.strictEqual(instance.stepperModal.qty, 1, 'Entered nonpositive quantities retain the existing minimum');
+  }
+  instance.stepperModal.qty = 1;
+  instance.stepperMinus();
+  assert.strictEqual(instance.stepperModal.qty, 1, 'Minus must preserve the minimum valid quantity');
+  console.log('  ✓ Empty editing, replacement 2, invalid submission preservation and stepper bounds pass');
+
   instance.stepperAdd(5); // qty -> 6
   assert.strictEqual(instance.stepperModal.qty, 6);
   assert.strictEqual(instance.stepperRemainingStock, 44);
@@ -360,6 +411,16 @@ async function runWorkflowTests() {
   assert.strictEqual(txCall.body.type, 'out');
   assert.strictEqual(txCall.body.qty, 6);
   console.log('  ✓ 1-Tap Stepper withdrawal executes and reduces stock accurately');
+
+  instance.openWithdrawStepper(targetProduct);
+  instance.stepperModal.qty = '';
+  instance.updateModalCalculation();
+  instance.stepperModal.qty = 2;
+  instance.updateModalCalculation();
+  await instance.confirmQuickWithdraw();
+  assert.strictEqual(targetProduct.stock, 42, 'Replacing the cleared quantity with 2 must subtract exactly 2');
+  assert.strictEqual(instance.history.at(-1).qty, 2);
+  assert.strictEqual(capturedCalls.filter(c => c.body.action === 'transaction' && c.body.productId === 104).at(-1).body.qty, 2);
 
   // 5. Test Pick List & Admin Adjust Stock
   console.log('\n[5/5] Testing Pick List & Admin Stock Adjustment...');

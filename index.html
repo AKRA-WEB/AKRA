@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <script src="js/akra-shell-bridge.js?v=20261003.01"></script>
+    <script src="js/akra-shell-bridge.js?v=20261005.01"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BUYMORETH | เบิกย้ายสินค้า (AKRA)</title>
@@ -258,7 +258,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20261003.01";
+    var CURRENT_VERSION = "20261005.01";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -1519,7 +1519,7 @@
                 });
             },
             updateModalCalculation() {
-                if (!this.stepperModal.product) return;
+                if (!this.stepperModal.product || this.stepperModal.qty === '') return;
                 let q = parseInt(this.stepperModal.qty, 10);
                 if (isNaN(q) || q < 1) q = 1;
                 if (q > this.stepperModal.product.stock) q = this.stepperModal.product.stock;
@@ -1531,14 +1531,12 @@
                 }
             },
             stepperPlus() {
-                if (this.stepperModal.product && this.stepperModal.qty < this.stepperModal.product.stock) {
-                    this.stepperModal.qty += 1;
-                }
+                this.stepperAdd(1);
             },
             stepperAdd(amount) {
                 if (!this.stepperModal.product) return;
                 const max = this.stepperModal.product.stock;
-                this.stepperModal.qty = Math.min((this.stepperModal.qty || 0) + amount, max);
+                this.stepperModal.qty = Math.min((parseInt(this.stepperModal.qty, 10) || 0) + amount, max);
             },
             stepperSetAll() {
                 if (!this.stepperModal.product) return;
@@ -1548,7 +1546,7 @@
                 if (!this.stepperModal.product) return;
                 const prod = this.stepperModal.product;
                 const qty = parseInt(this.stepperModal.qty, 10);
-                if (qty <= 0 || qty > prod.stock) {
+                if (!Number.isFinite(qty) || qty <= 0 || qty > prod.stock) {
                     this.showAlert('ข้อมูลไม่ถูกต้อง', 'จำนวนเบิกไม่ถูกต้อง');
                     return;
                 }
