@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <script src="js/akra-shell-bridge.js?v=20261005.01"></script>
+    <script src="js/akra-shell-bridge.js?v=20261009.03"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BUYMORETH | เบิกย้ายสินค้า (AKRA)</title>
@@ -249,6 +249,89 @@
             .w5-bottom-nav > button { flex-direction:column; gap:3px; font-size:12px; }
             .w5-dialog-overlay > .bg-white { padding:20px; }
         }
+        .w5-dashboard { min-width:0; }
+        .w5-report-heading, .w5-report-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+        .w5-report-heading h2 { font-size:24px; font-weight:700; letter-spacing:-.025em; }
+        .w5-report-heading p, .w5-report-note { color:#556276; font-size:12px; line-height:1.6; }
+        .w5-report-nav { display:flex; gap:4px; border-bottom:1px solid #dce2eb; flex-wrap:wrap; }
+        .w5-report-nav button { padding:0 14px; border-bottom:3px solid transparent; font-weight:600; color:#556276; }
+        .w5-report-nav button[aria-pressed="true"] { border-color:#171c8f; color:#171c8f; }
+        .w5-report-filters { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; padding:18px 0; border-bottom:1px solid #dce2eb; }
+        .w5-report-filters label, .w5-stock-filters label { display:flex; flex-direction:column; gap:6px; color:#36445a; font-size:12px; font-weight:600; min-width:0; }
+        .w5-report-filters input, .w5-report-filters select, .w5-stock-filters input, .w5-stock-filters select { width:100%; min-width:0; padding:10px 12px; border:1px solid #bbc5d5; background:#fff; color:#182234; font-weight:400; }
+        .w5-report-filters .w5-filter-wide { grid-column:span 2; }
+        .w5-filter-actions { display:flex; align-items:end; gap:8px; flex-wrap:wrap; }
+        .w5-report-button { border:1px solid #bbc5d5; border-radius:8px; padding:0 14px; color:#36445a; background:#fff; font-weight:600; }
+        .w5-report-button:hover:not(:disabled) { background:#f1f4f8; }
+        .w5-report-button.primary { color:#fff; border-color:#171c8f; background:#171c8f; }
+        .w5-report-button.primary:hover:not(:disabled) { background:#101466; }
+        .w5-report-button:disabled { opacity:.55; cursor:not-allowed; }
+        .w5-report-section { padding-top:24px; }
+        .w5-report-section h3 { font-size:16px; font-weight:700; margin-bottom:8px; }
+        .w5-report-metrics { display:flex; flex-wrap:wrap; gap:26px; padding:20px 0; border-bottom:1px solid #dce2eb; }
+        .w5-report-metrics div { flex:1; min-width:115px; }
+        .w5-report-metrics dt { color:#556276; font-size:12px; }
+        .w5-report-metrics dd { font-size:23px; font-weight:700; margin-top:4px; }
+        .w5-report-table { width:100%; border-collapse:collapse; text-align:left; font-size:13px; table-layout:fixed; }
+        .w5-report-table th { background:#f3f5f9; color:#556276; font-size:12px; font-weight:600; }
+        .w5-report-table th, .w5-report-table td { padding:12px 10px; border-bottom:1px solid #dce2eb; vertical-align:top; overflow-wrap:anywhere; }
+        .w5-report-table .numeric { text-align:right; }
+        .w5-report-table small { display:block; font-size:12px; color:#556276; margin-top:3px; }
+        .w5-report-link { color:#171c8f; text-align:left; text-decoration:underline; text-underline-offset:3px; font-weight:600; }
+        .w5-report-link:hover { color:#101466; }
+        .w5-report-link:disabled { color:#556276; text-decoration:none; }
+        .w5-movement-in { color:#08613c; }
+        .w5-movement-out { color:#b42335; }
+        .w5-movement-adjust { color:#6941a5; }
+        .w5-report-state { padding:28px 16px; background:#f5f7fa; color:#36445a; line-height:1.65; font-size:13px; }
+        .w5-report-state.error { background:#fff4f2; color:#9b2335; }
+        .w5-report-state button { margin-top:12px; }
+        .w5-report-skeleton { height:12px; max-width:80%; background:#dce2eb; border-radius:4px; margin:14px 0; }
+        .w5-report-skeleton:nth-child(2) { width:55%; }
+        .w5-trend-chart { display:grid; grid-template-columns:38px minmax(0,1fr); gap:8px; margin:20px 0 16px; padding-top:8px; }
+        .w5-trend-scale { position:relative; height:160px; color:#556276; font-size:12px; text-align:right; }
+        .w5-trend-scale span { position:absolute; right:0; }
+        .w5-trend-scale span:first-child { top:-9px; }
+        .w5-trend-scale span:last-child { bottom:-9px; }
+        .w5-trend-plot { min-width:0; }
+        .w5-trend-plot svg { display:block; width:100%; height:160px; overflow:visible; }
+        .w5-trend-grid { stroke:#dce2eb; stroke-width:1; vector-effect:non-scaling-stroke; }
+        .w5-trend-segment.in { fill:#08613c; }
+        .w5-trend-segment.out { fill:#b42335; }
+        .w5-trend-segment.adjust { fill:#6941a5; }
+        .w5-trend-selection { fill:none; stroke:#36445a; stroke-width:2; vector-effect:non-scaling-stroke; }
+        .w5-trend-legend { display:flex; flex-wrap:wrap; gap:16px; margin-top:8px; font-size:12px; }
+        .w5-trend-legend span::before { content:''; display:inline-block; width:8px; height:8px; background:currentColor; margin-right:5px; }
+        .w5-trend-dates { position:relative; height:24px; margin-top:8px; color:#556276; font-size:12px; }
+        .w5-trend-dates span { position:absolute; white-space:nowrap; }
+        .w5-trend-detail { display:grid; grid-template-columns:minmax(180px,260px) minmax(0,1fr); gap:24px; align-items:end; }
+        .w5-trend-detail label { display:flex; flex-direction:column; gap:6px; font-size:12px; font-weight:600; color:#36445a; }
+        .w5-trend-detail select { width:100%; min-width:0; min-height:48px; padding:10px 12px; border:1px solid #bbc5d5; background:#fff; color:#182234; font-weight:400; }
+        .w5-trend-counts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+        .w5-trend-counts dt { color:#556276; font-size:12px; }
+        .w5-trend-counts dd { font-size:18px; font-weight:600; margin-top:3px; }
+        .w5-report-pages { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; padding-top:16px; }
+        .w5-stock-filters { display:grid; grid-template-columns:minmax(0,2fr) minmax(0,1fr); gap:12px; padding:18px 0; }
+        .w5-report-history-table th:nth-child(1) { width:16%; }
+        .w5-report-history-table th:nth-child(2) { width:30%; }
+        .w5-report-history-table th:nth-child(3) { width:12%; }
+        .w5-report-history-table th:nth-child(4) { width:13%; }
+        .w5-report-history-table th:nth-child(5) { width:13%; }
+        .w5-report-history-table th:nth-child(6) { width:16%; }
+        @media(max-width:700px) {
+            .w5-report-heading h2 { font-size:21px; }
+            .w5-report-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .w5-report-nav button { flex:1 1 40%; padding-inline:8px; }
+            .w5-stock-filters { grid-template-columns:1fr; }
+            .w5-report-metrics { gap:16px; }
+            .w5-report-metrics div { flex-basis:40%; }
+            .w5-report-table.responsive thead { display:none; }
+            .w5-report-table.responsive tbody, .w5-report-table.responsive tr { display:block; }
+            .w5-report-table.responsive tr { padding:12px 0; border-bottom:1px solid #dce2eb; }
+            .w5-report-table.responsive td { display:grid; grid-template-columns:90px minmax(0,1fr); gap:10px; padding:4px 0; border:0; text-align:left; }
+            .w5-report-table.responsive td::before { content:attr(data-label); color:#556276; font-size:12px; }
+            .w5-trend-detail { grid-template-columns:1fr; gap:16px; }
+        }
         @media(prefers-reduced-motion:reduce) { .w5-app *, .pulse-dot { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 
     </style>
@@ -258,7 +341,7 @@
 <!-- ================= SYSTEM AUTH & LOG SCRIPT ================= -->
 <script>
     var CURRENT_APP_NAME = "AKRA W5"; 
-    var CURRENT_VERSION = "20261005.01";
+    var CURRENT_VERSION = "20261009.03";
     async function checkAppVersion() {
         try {
             const res = await fetch('version.json?t=' + Date.now());
@@ -747,79 +830,92 @@
         </section>
 
         <!-- ==================== TAB 3: DASHBOARD & HISTORY ==================== -->
-        <section v-show="activeTab === 'dashboard'" class="space-y-4">
+        <section v-show="activeTab === 'dashboard'" class="w5-dashboard space-y-4" aria-label="แดชบอร์ด W5">
             
-            <!-- Realtime Status Banner -->
-            <div class="flex justify-between items-center">
-                <h2 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                    <i class="fas fa-chart-pie text-[#171c8f]"></i> แดชบอร์ดคลังสินค้า
-                </h2>
-                <div class="text-[11px] text-slate-500 flex items-center bg-white px-2.5 py-1 rounded-full shadow-sm border border-slate-200">
-                    <span class="pulse-dot mr-1.5"></span> อัปเดตสด
-                </div>
+            <div class="w5-report-heading">
+                <div><h2>แดชบอร์ดคลัง W5</h2><p>ดูสต็อกปัจจุบันและค้นการเคลื่อนไหวย้อนหลังตามช่วงเวลาที่ต้องการ</p></div>
+                <button type="button" @click="refreshDashboard" :disabled="dashboardLoading" class="w5-report-button"><i class="fas fa-rotate-right" aria-hidden="true"></i> อัปเดตข้อมูล</button>
             </div>
+            <nav class="w5-report-nav" aria-label="มุมมองแดชบอร์ด">
+                <button type="button" @click="dashboardView = 'overview'" :aria-pressed="dashboardView === 'overview'">ภาพรวม</button>
+                <button type="button" @click="dashboardView = 'history'" :aria-pressed="dashboardView === 'history'">ประวัติย้อนหลัง</button>
+                <button type="button" @click="dashboardView = 'stock'" :aria-pressed="dashboardView === 'stock'">สต็อกปัจจุบัน</button>
+                <button type="button" @click="dashboardView = 'recent'" :aria-pressed="dashboardView === 'recent'">รายการล่าสุด / ยกเลิก</button>
+            </nav>
+            <form v-show="dashboardView === 'overview' || dashboardView === 'history'" @submit.prevent="applyDashboardFilters" class="w5-report-filters" aria-label="ค้นประวัติ W5">
+                <label>ช่วงเวลา<select id="w5-report-period" v-model="dashboardFilters.preset" @change="setDashboardPreset"><option value="today">วันนี้</option><option value="yesterday">เมื่อวาน</option><option value="7d">7 วันล่าสุด</option><option value="30d">30 วันล่าสุด</option><option value="thisMonth">เดือนนี้</option><option value="lastMonth">เดือนก่อน</option><option value="custom">กำหนดเอง</option><option value="all">ทั้งหมดที่มีข้อมูล</option></select></label>
+                <label>ตั้งแต่วันที่<input id="w5-report-start" type="date" v-model="dashboardFilters.startDate" :disabled="dashboardFilters.preset !== 'custom'" @input="dashboardFilterChanged"></label>
+                <label>ถึงวันที่<input id="w5-report-end" type="date" v-model="dashboardFilters.endDate" :disabled="dashboardFilters.preset !== 'custom'" @input="dashboardFilterChanged"></label>
+                <label>ประเภท<select id="w5-report-type" v-model="dashboardFilters.type" @change="dashboardFilterChanged"><option value="">รับเข้า / เบิกออก / ปรับสต็อก</option><option value="in">รับเข้า</option><option value="out">เบิกออก</option><option value="adjust">ปรับสต็อก</option></select></label>
+                <label class="w5-filter-wide">สินค้า<select id="w5-report-product" v-model="dashboardFilters.productId" @change="dashboardFilterChanged"><option value="">สินค้าทั้งหมด</option><option v-for="item in dashboardOptions.products.filter(item => item.id !== null)" :key="item.id" :value="item.id">{{ item.name }} · #{{ item.id }}{{ item.active === false ? ' (เลิกใช้)' : '' }}</option></select></label>
+                <label>ผู้ทำรายการ<select id="w5-report-user" v-model="dashboardFilters.user" @change="dashboardFilterChanged"><option :value="null">ทุกคน</option><option v-for="user in dashboardOptions.users" :key="user" :value="user">{{ user || '(ไม่ระบุผู้ทำรายการ)' }}</option></select></label>
+                <label>ค้นข้อความ<input id="w5-report-query" type="search" maxlength="200" v-model="dashboardFilters.query" @input="dashboardFilterChanged" placeholder="ชื่อสินค้า ผู้ทำรายการ หรือรหัส GR"></label>
+                <div class="w5-filter-actions w5-filter-wide"><button id="w5-report-search" type="submit" class="w5-report-button primary" :disabled="dashboardLoading">ค้นข้อมูล</button><button type="button" @click="clearDashboardFilters" class="w5-report-button">ล้างฟิลเตอร์</button></div>
+                <p class="w5-report-note w5-filter-wide">วันที่อ้างอิงวันที่รายการเดิมในเขตเวลาไทย · ข้อมูลที่มี: {{ dashboardOptions.range.firstDate || '—' }} ถึง {{ dashboardOptions.range.lastDate || '—' }}</p>
+            </form>
+            <div v-if="dashboardValidation" role="alert" class="w5-report-state error">{{ dashboardValidation }}</div>
+            <div v-if="dashboardLoading" role="status" aria-live="polite" class="w5-report-state"><p>กำลังค้นข้อมูล W5...</p><div class="w5-report-skeleton"></div><div class="w5-report-skeleton"></div></div>
+            <div v-else-if="dashboardError && dashboardView !== 'recent'" role="alert" class="w5-report-state error"><p>{{ dashboardError }}</p><button type="button" @click="applyDashboardFilters" class="w5-report-button">ลองโหลดอีกครั้ง</button></div>
+            <div v-else-if="!dashboardReport && (dashboardView === 'overview' || dashboardView === 'history') && !dashboardValidation" role="status" class="w5-report-state">เลือกฟิลเตอร์แล้วกด “ค้นข้อมูล” เพื่อดูผลครบทุกหน้าของช่วงเวลานั้น</div>
+            <template v-if="dashboardReport && !dashboardLoading">
+                <div v-show="dashboardView === 'overview' || dashboardView === 'history'" class="w5-report-toolbar">
+                    <p class="w5-report-note">{{ dashboardPeriodLabel }} · {{ formatDashboardNumber(dashboardReport.total) }} รายการ · ข้อมูลถึง {{ formatDate(dashboardReport.snapshotAt) }}</p>
+                    <button id="w5-report-export" type="button" @click="exportDashboardCSV" :disabled="dashboardExporting || dashboardReport.total === 0" class="w5-report-button"><i class="fas fa-download" aria-hidden="true"></i> {{ dashboardExporting ? 'กำลังรวบรวม ' + dashboardExportProgress + ' รายการ' : 'CSV ทั้งหมดตามฟิลเตอร์' }}</button>
+                </div>
+                <p v-if="dashboardExportError" role="alert" class="w5-report-state error">{{ dashboardExportError }}</p>
+                <div v-show="dashboardView === 'overview'">
+                    <dl class="w5-report-metrics"><div><dt>การเคลื่อนไหวในช่วงที่เลือก</dt><dd>{{ formatDashboardNumber(dashboardReport.summary.movementCount) }}</dd></div><div><dt>สินค้าในประวัติ</dt><dd>{{ formatDashboardNumber(dashboardReport.summary.productCount) }}</dd></div><div><dt>ผู้ทำรายการ</dt><dd>{{ formatDashboardNumber(dashboardReport.summary.userCount) }}</dd></div><div><dt>รับเข้า / เบิกออก / ปรับสต็อก</dt><dd>{{ dashboardReport.summary.byType.in }} / {{ dashboardReport.summary.byType.out }} / {{ dashboardReport.summary.byType.adjust }}</dd></div></dl>
+                    <div v-if="dashboardReport.total === 0" class="w5-report-state" role="status">ไม่พบรายการตามฟิลเตอร์นี้ ลองขยายช่วงเวลา หรือล้างฟิลเตอร์</div>
+                    <p v-else class="w5-report-note pt-4">จำนวนรายการข้างต้นสรุปจากข้อมูลที่ตรงฟิลเตอร์ทั้งหมด ประวัติเดิมไม่ได้บันทึกหน่วยสินค้า จึงแสดงจำนวนแยกรายสินค้าในตารางด้านล่าง และไม่รวมจำนวนต่างหน่วยเป็นยอดเดียว</p>
+                    <section v-if="dashboardReport.total" class="w5-report-section" aria-label="แนวโน้มการเคลื่อนไหว">
+                        <h3>แนวโน้มจำนวนรายการ {{ dashboardTrendLabel }}</h3>
+                        <p class="w5-report-note">แต่ละแท่งคือจำนวนรายการรวม แยกสีตามประเภท ไม่ใช่จำนวนสินค้า · แสดงเฉพาะวันหรือเดือนที่มีรายการตรงฟิลเตอร์</p>
+                        <div class="w5-trend-legend" aria-label="ประเภทการเคลื่อนไหวเรียงจากล่างขึ้นบน"><p class="w5-report-note">จากล่างขึ้นบน:</p><span class="w5-movement-in">รับเข้า</span><span class="w5-movement-out">เบิกออก</span><span class="w5-movement-adjust">ปรับสต็อก</span></div>
+                        <div class="w5-trend-chart">
+                            <div class="w5-trend-scale" aria-hidden="true"><span>{{ formatDashboardNumber(dashboardTrendMax) }}</span><span>0</span></div>
+                            <div class="w5-trend-plot">
+                                <svg id="w5-trend-chart" viewBox="0 0 1000 160" preserveAspectRatio="none" role="img" aria-labelledby="w5-trend-title w5-trend-description">
+                                    <title id="w5-trend-title">จำนวนรายการรวม {{ dashboardTrendLabel }}</title>
+                                    <desc id="w5-trend-description">{{ dashboardTrends.length }} ช่วงที่มีรายการตรงฟิลเตอร์ เลือกวันหรือเดือนด้านล่างเพื่ออ่านจำนวนรวมและจำนวนแต่ละประเภท</desc>
+                                    <line x1="0" y1="0" x2="1000" y2="0" class="w5-trend-grid"></line>
+                                    <line x1="0" y1="160" x2="1000" y2="160" class="w5-trend-grid"></line>
+                                    <g v-for="trend in dashboardTrendBars" :key="trend.date">
+                                        <rect v-for="segment in trend.segments" :key="segment.type" :x="trend.x" :y="segment.y" :width="trend.width" :height="segment.height" class="w5-trend-segment" :class="segment.type"></rect>
+                                        <rect v-if="dashboardSelectedTrend && dashboardSelectedTrend.date === trend.date" :x="trend.x" :y="trend.y" :width="trend.width" :height="trend.height" class="w5-trend-selection"></rect>
+                                    </g>
+                                </svg>
+                                <div class="w5-trend-dates" aria-hidden="true"><span v-for="label in dashboardTrendDateLabels" :key="label.date" :style="{left:label.position + '%', transform:label.transform}">{{ dashboardTrendDateLabel(label.date) }}</span></div>
+                            </div>
+                        </div>
+                        <div v-if="dashboardSelectedTrend" class="w5-trend-detail">
+                            <label for="w5-trend-period">ดูรายละเอียดวัน / เดือน<select id="w5-trend-period" :value="dashboardSelectedTrend.date" @change="dashboardTrendDate = $event.target.value"><option v-for="trend in dashboardTrends" :key="trend.date" :value="trend.date">{{ trend.date }}</option></select></label>
+                            <dl class="w5-trend-counts" aria-live="polite" aria-atomic="true"><div><dt>รวมรายการ</dt><dd>{{ formatDashboardNumber(dashboardSelectedTrend.movementCount) }}</dd></div><div><dt>รับเข้า</dt><dd>{{ formatDashboardNumber(dashboardSelectedTrend.inCount) }}</dd></div><div><dt>เบิกออก</dt><dd>{{ formatDashboardNumber(dashboardSelectedTrend.outCount) }}</dd></div><div><dt>ปรับสต็อก</dt><dd>{{ formatDashboardNumber(dashboardSelectedTrend.adjustCount) }}</dd></div></dl>
+                        </div>
+                    </section>
+                    <section v-if="dashboardReport.total" class="w5-report-section"><h3>การเคลื่อนไหวรายสินค้า</h3><p class="w5-report-note">เลือกชื่อสินค้าเพื่อเปิดประวัติของรหัสนั้น · จำนวนแต่ละแถวเป็นหน่วยเดิมที่ไม่ระบุในประวัติ</p><table class="w5-report-table responsive"><thead><tr><th style="width:40%">สินค้า</th><th class="numeric">รายการ</th><th class="numeric">รับเข้า</th><th class="numeric">เบิกออก</th><th class="numeric">ปรับ / สุทธิ</th></tr></thead><tbody><tr v-for="(item,index) in dashboardReport.productSummary" :key="String(item.productId) + ':' + index"><td data-label="สินค้า"><div><button type="button" @click="showDashboardProduct(item)" :disabled="!item.productId" class="w5-report-link">{{ item.productName }}</button><small>{{ item.productId ? '#' + item.productId : 'ไม่มีรหัสสินค้าเดิม' }} · {{ item.unit || 'ไม่ระบุหน่วย' }}</small></div></td><td data-label="รายการ" class="numeric">{{ item.movementCount }}</td><td data-label="รับเข้า" class="numeric">{{ formatDashboardNumber(item.inQty) }}</td><td data-label="เบิกออก" class="numeric">{{ formatDashboardNumber(item.outQty) }}</td><td data-label="ปรับ / สุทธิ" class="numeric">{{ formatDashboardNumber(item.adjustQty) }} / {{ formatDashboardNumber(item.netQty) }}</td></tr></tbody></table></section>
+                </div>
+                <div v-show="dashboardView === 'history'" class="w5-report-section">
+                    <h3>ประวัติการเคลื่อนไหว</h3><p class="w5-report-note">แสดงชื่อและผู้ทำรายการตามที่บันทึกไว้ · ยอดปรับสต็อกแสดงผลต่างพร้อมเครื่องหมาย · รายการ [ยกเลิก] คือการเคลื่อนไหวกลับทิศ</p>
+                    <div v-if="!dashboardReport.total" role="status" class="w5-report-state">ไม่พบรายการตามฟิลเตอร์นี้ ลองขยายช่วงเวลา หรือล้างฟิลเตอร์</div>
+                    <table v-else class="w5-report-table responsive w5-report-history-table"><caption class="sr-only">ประวัติ W5 ตามฟิลเตอร์ เรียงวันที่รายการล่าสุดก่อน</caption><thead><tr><th>วันที่รายการ</th><th>สินค้า</th><th>ประเภท</th><th class="numeric">จำนวน</th><th>ผู้ทำรายการ</th><th>ที่มา GR</th></tr></thead><tbody><tr v-for="row in dashboardReport.history" :key="row.id"><td data-label="วันที่รายการ"><div>{{ formatDate(row.eventAt) }}<small v-if="row.dateSource === 'createdAtFallback'">ใช้เวลาบันทึกเข้าระบบ: วันที่เดิมไม่สมบูรณ์</small><small v-else>เดิม: {{ row.date }} {{ row.time }}</small></div></td><td data-label="สินค้า"><div><button type="button" @click="showDashboardProduct(row)" :disabled="!row.productId" class="w5-report-link">{{ row.productName }}</button><small>{{ row.productId ? '#' + row.productId : 'ไม่มีรหัสสินค้าเดิม' }}</small></div></td><td data-label="ประเภท" :class="'w5-movement-' + row.type">{{ dashboardTypeLabel(row.type) }}{{ row.productName.includes('[ยกเลิก]') ? ' (กลับทิศ)' : '' }}</td><td data-label="จำนวน" class="numeric"><div>{{ formatDashboardSigned(row.signedQty) }}<small>{{ row.unit || 'ไม่ระบุหน่วยเดิม' }}</small></div></td><td data-label="ผู้ทำรายการ">{{ row.user || 'ไม่ระบุ' }}</td><td data-label="ที่มา GR">{{ row.refGrItemId || 'ไม่มีการเชื่อม GR' }}</td></tr></tbody></table>
+                    <div v-if="dashboardReport.total" class="w5-report-pages"><span class="w5-report-note">{{ dashboardReport.page.offset + 1 }}–{{ dashboardReport.page.offset + dashboardReport.history.length }} จาก {{ dashboardReport.total }} รายการ</span><div class="flex gap-2"><button id="w5-report-prev" type="button" @click="changeDashboardPage(-1)" :disabled="dashboardLoading || dashboardReport.page.offset === 0" class="w5-report-button">ก่อนหน้า</button><button id="w5-report-next" type="button" @click="changeDashboardPage(1)" :disabled="dashboardLoading || !dashboardReport.page.hasMore" class="w5-report-button">ถัดไป</button></div></div>
+                </div>
 
-            <!-- KPI Cards Grid (4 Box) -->
-            <div class="w5-summary grid grid-cols-2 gap-2.5">
-                <div class="bg-white border-l-4 border-indigo-600 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-start text-slate-500">
-                        <span class="text-[11px] font-bold">SKU ทั้งหมด</span>
-                        <i class="fas fa-boxes text-indigo-200 text-sm"></i>
-                    </div>
-                    <p class="text-2xl font-black text-slate-900 mt-1">{{ products.length }}</p>
-                </div>
-                <div class="bg-white border-l-4 border-emerald-500 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-start text-slate-500">
-                        <span class="text-[11px] font-bold">ยอดรวมคลัง</span>
-                        <i class="fas fa-layer-group text-emerald-200 text-sm"></i>
-                    </div>
-                    <p class="text-2xl font-black text-slate-900 mt-1">{{ totalItemsInStock }}</p>
-                </div>
-                <div class="bg-white border-l-4 border-rose-500 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-start text-rose-500">
-                        <span class="text-[11px] font-bold">ของใกล้หมด</span>
-                        <i class="fas fa-exclamation-triangle text-rose-200 text-sm"></i>
-                    </div>
-                    <p class="text-2xl font-black text-rose-600 mt-1">{{ lowStockItems.length }} <span class="text-xs font-normal text-slate-400">รายการ</span></p>
-                </div>
-                <div class="bg-white border-l-4 border-purple-500 p-3.5 rounded-r-2xl border-y border-r border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-start text-slate-500">
-                        <span class="text-[11px] font-bold">เคลื่อนไหววันนี้</span>
-                        <i class="fas fa-bolt text-purple-200 text-sm"></i>
-                    </div>
-                    <p class="text-2xl font-black text-slate-900 mt-1">{{ todayHistoryCount }} <span class="text-xs font-normal text-slate-400">ครั้ง</span></p>
-                </div>
-            </div>
-
-            <!-- Low Stock Warning Alert -->
-            <div v-if="lowStockItems.length > 0" class="w5-low-stock bg-rose-50 border border-rose-200 rounded-2xl overflow-hidden shadow-sm">
-                <div class="bg-rose-100/70 px-3.5 py-2 border-b border-rose-200 flex items-center justify-between">
-                    <span class="text-xs font-extrabold text-rose-800 flex items-center gap-1.5">
-                        <i class="fas fa-exclamation-circle text-rose-600"></i> แจ้งเตือนสินค้าใกล้หมด (ต่ำกว่า 20)
-                    </span>
-                    <span class="text-[10px] font-bold bg-white text-rose-700 px-2 py-0.5 rounded-full border border-rose-200">{{ lowStockItems.length }}</span>
-                </div>
-                <ul class="divide-y divide-rose-100 max-h-36 overflow-y-auto">
-                    <li v-for="item in lowStockItems" :key="item.id" class="px-3.5 py-2 text-xs flex justify-between items-center hover:bg-rose-100/40">
-                        <span class="text-slate-800 line-clamp-1 pr-2 flex-1 font-medium">{{ item.name }}</span>
-                        <span class="font-extrabold text-rose-600 bg-white px-2 py-0.5 rounded border border-rose-200 text-[11px] shrink-0">
-                            {{ item.stock }} {{ item.unit }}
-                        </span>
-                    </li>
-                </ul>
-            </div>
-
+            </template>
+            <section v-if="dashboardView === 'stock' && dashboardInventory" class="w5-report-section"><h3>สต็อกปัจจุบัน</h3><p class="w5-report-note">ยอด ณ {{ formatDate(dashboardInventory.asOf) }} · ไม่เปลี่ยนตามฟิลเตอร์ประวัติ</p><dl class="w5-report-metrics"><div><dt>สินค้าทั้งหมด</dt><dd>{{ dashboardInventory.summary.productCount }}</dd></div><div><dt>หมดสต็อก</dt><dd>{{ dashboardInventory.summary.zeroStockCount }}</dd></div><div><dt>ใกล้หมด (มากกว่า 0 และต่ำกว่า 20)</dt><dd>{{ dashboardInventory.summary.lowStockCount }}</dd></div></dl><p class="w5-report-note mt-4">ยอดแยกหน่วย: <span v-for="(unit,index) in dashboardInventory.summary.byUnit" :key="index">{{ index ? ' · ' : '' }}{{ formatDashboardNumber(unit.stock) }} {{ unit.unit || 'ไม่ระบุหน่วย' }} ({{ unit.productCount }} สินค้า)</span></p><div class="w5-stock-filters"><label>ค้นสต็อกปัจจุบัน<input id="w5-stock-query" type="search" v-model="dashboardStockQuery" placeholder="ชื่อสินค้า หรือรหัสสินค้า"></label><label>สถานะ<select id="w5-stock-status" v-model="dashboardStockStatus"><option value="all">ทั้งหมด</option><option value="out">หมดสต็อก</option><option value="low">ใกล้หมด</option><option value="good">พร้อมเบิก</option></select></label></div><table v-if="dashboardStockProducts.length" class="w5-report-table responsive"><thead><tr><th style="width:55%">สินค้า</th><th class="numeric">คงเหลือ</th><th>สถานะ</th><th>ประวัติ</th></tr></thead><tbody><tr v-for="item in dashboardStockProducts" :key="item.id"><td data-label="สินค้า"><div>{{ item.name }}<small>#{{ item.id }}</small></div></td><td data-label="คงเหลือ" class="numeric">{{ formatDashboardNumber(item.stock) }} {{ item.unit || 'ไม่ระบุหน่วย' }}</td><td data-label="สถานะ"><span class="w5-status" :class="catalogStockState(item).kind">{{ catalogStockState(item).text }}</span></td><td data-label="ประวัติ"><button type="button" @click="showDashboardProduct({productId:item.id})" class="w5-report-link">ดูประวัติ</button></td></tr></tbody></table><div v-else class="w5-report-state" role="status">ไม่พบสินค้าตามคำค้นหรือสถานะที่เลือก</div></section>
+            <div v-if="!dashboardInventory && dashboardView === 'stock' && !dashboardLoading && !dashboardError" class="w5-report-state">กด “อัปเดตข้อมูล” เพื่อโหลดสต็อกปัจจุบัน</div>
             <!-- History Section -->
-            <div class="space-y-2.5 pt-2">
+            <div v-show="dashboardView === 'recent'" class="space-y-2.5 pt-2">
                 <div class="flex justify-between items-center">
                     <h3 class="text-sm font-extrabold text-slate-900 flex items-center gap-1.5">
-                        <i class="fas fa-history text-slate-500"></i> ประวัติล่าสุด (Log)
+                        <i class="fas fa-history text-slate-500"></i> รายการล่าสุด / ยกเลิก
                     </h3>
                     <button @click="exportHistoryToCSV" class="text-xs font-bold text-[#171c8f] hover:text-[#101466] bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 flex items-center gap-1 transition">
-                        <i class="fas fa-download"></i> ดาวน์โหลด CSV
+                        <i class="fas fa-download"></i> CSV รายการล่าสุด
                     </button>
                 </div>
 
+                <p class="w5-report-note">เฉพาะรายการล่าสุดที่ระบบโหลดไว้ (ไม่เกิน 150 รายการ) · ค้นและส่งออกย้อนหลังทั้งหมดได้ใน “ประวัติย้อนหลัง”</p>
                 <div class="w5-history bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <ul v-if="history.length > 0" class="divide-y divide-slate-100 max-h-64 overflow-y-auto">
                         <li v-for="(log, index) in reversedHistory" :key="index" class="p-3 text-xs flex justify-between items-center hover:bg-slate-50 transition">
@@ -1171,6 +1267,26 @@
     const { createApp } = Vue;
     const WEB_APP_URL = "https://hgxrrskztbpejirrdpbq.supabase.co/functions/v1/akra-api";
     const AKRA_CACHE_TTL = 5 * 60 * 1000;
+    function w5DashboardDates(preset, now = Date.now()) {
+        const day = new Date(now + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const today = new Date(day + 'T00:00:00Z');
+        const date = value => value.toISOString().slice(0, 10);
+        const shift = count => date(new Date(today.getTime() + count * 86400000));
+        if (preset === 'all') return { startDate: '', endDate: '' };
+        if (preset === 'yesterday') return { startDate: shift(-1), endDate: shift(-1) };
+        if (preset === 'thisMonth') return { startDate: day.slice(0, 8) + '01', endDate: day };
+        if (preset === 'lastMonth') {
+            const first = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+            const last = new Date(first.getTime() - 86400000);
+            return { startDate: date(new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), 1))), endDate: date(last) };
+        }
+        return { startDate: shift(preset === '7d' ? -6 : preset === '30d' ? -29 : 0), endDate: day };
+    }
+    function w5DashboardCsvCell(value) {
+        let text = value === null || value === undefined ? '' : String(value);
+        if (typeof value !== 'number' && /^[\s]*[=+\-@]/.test(text)) text = "'" + text;
+        return '"' + text.replace(/"/g, '""') + '"';
+    }
     function preferenceStorageKey(key) {
         return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(appUser?.identityId || '') ? key + '::identity:' + appUser.identityId : null;
     }
@@ -1204,6 +1320,13 @@
                 txViewMode: 'catalog',
                 products: [],
                 history: [],
+                dashboardView: 'overview',
+                dashboardFilters: { preset: '30d', ...w5DashboardDates('30d'), productId: '', type: '', user: null, query: '' },
+                dashboardOptions: { products: [], users: [], range: { firstDate: null, lastDate: null } },
+                dashboardReport: null, dashboardInventory: null, dashboardApplied: null, dashboardLoading: false, dashboardError: '', dashboardValidation: '', dashboardGeneration: 0,
+                dashboardExporting: false, dashboardExportProgress: 0, dashboardExportError: '', dashboardExportGeneration: 0,
+                dashboardStockQuery: '', dashboardStockStatus: 'all',
+                dashboardTrendDate: '',
                 pickList: [],
                 form: { type: 'out', productId: '', qty: null, user: currentUser || '' },
                 newProductName: '', newProductUnit: 'ชิ้น', searchDashboard: '', searchTransaction: '', searchManage: '', searchTransactionList: '',
@@ -1235,6 +1358,54 @@
             }
         },
         computed: {
+            dashboardPeriodLabel() {
+                if (!this.dashboardApplied) return '';
+                return this.dashboardApplied.startDate ? this.dashboardApplied.startDate + ' ถึง ' + this.dashboardApplied.endDate : 'ทุกช่วงที่มีข้อมูล';
+            },
+            dashboardTrends() {
+                const rows = this.dashboardReport?.trends || [];
+                if (rows.length <= 45) return rows;
+                const grouped = new Map();
+                rows.forEach(row => {
+                    const date = row.date.slice(0, 7);
+                    const bucket = grouped.get(date) || { date, movementCount: 0, inCount: 0, outCount: 0, adjustCount: 0 };
+                    ['movementCount', 'inCount', 'outCount', 'adjustCount'].forEach(key => bucket[key] += row[key]);
+                    grouped.set(date, bucket);
+                });
+                return [...grouped.values()];
+            },
+            dashboardTrendLabel() { return (this.dashboardReport?.trends.length || 0) > 45 ? 'รายเดือน' : 'รายวัน'; },
+            dashboardTrendMax() { return Math.max(1, ...this.dashboardTrends.map(row => row.movementCount)); },
+            dashboardTrendBars() {
+                const rows = this.dashboardTrends, step = 1000 / Math.max(1, rows.length), width = Math.min(52, step * 0.65);
+                return rows.map((row, index) => {
+                    const height = row.movementCount / this.dashboardTrendMax * 160;
+                    let cumulativeCount = 0;
+                    const segments = ['in', 'out', 'adjust'].map(type => {
+                        const count = row[type + 'Count']; cumulativeCount += count;
+                        return { type, count, height: count / this.dashboardTrendMax * 160, y: 160 - cumulativeCount / this.dashboardTrendMax * 160 };
+                    }).filter(segment => segment.count > 0);
+                    return { ...row, x: (index + 0.5) * step - width / 2, width, height, y: 160 - height, segments };
+                });
+            },
+            dashboardTrendDateLabels() {
+                const rows = this.dashboardTrends, count = Math.min(5, rows.length);
+                return Array.from({ length: count }, (_, index) => {
+                    const rowIndex = count === 1 ? 0 : Math.round(index * (rows.length - 1) / (count - 1));
+                    const position = (rowIndex + 0.5) / rows.length * 100;
+                    return { date: rows[rowIndex].date, position, transform: position < 10 ? 'none' : position > 90 ? 'translateX(-100%)' : 'translateX(-50%)' };
+                });
+            },
+            dashboardSelectedTrend() {
+                return this.dashboardTrends.find(row => row.date === this.dashboardTrendDate) || this.dashboardTrends.reduce((latest, row) => !latest || row.date > latest.date ? row : latest, null);
+            },
+            dashboardStockProducts() {
+                const query = this.dashboardStockQuery.trim().toLowerCase();
+                return (this.dashboardInventory?.products || []).filter(item =>
+                    (!query || item.name.toLowerCase().includes(query) || String(item.id).includes(query)) &&
+                    (this.dashboardStockStatus === 'all' || this.catalogStockState(item).kind === this.dashboardStockStatus)
+                );
+            },
             reversedHistory() { return [...this.history].reverse(); },
             totalItemsInStock() { return this.products.reduce((sum, p) => sum + p.stock, 0); },
             sortedProducts() { return [...this.products].sort((a, b) => b.stock - a.stock || a.name.localeCompare(b.name, 'th')); },
@@ -1290,6 +1461,7 @@
                 this.showDropdown = false; this.form.productId = ''; this.form.qty = null; this.form.type = 'out';
                 if(newTab === 'dashboard') {
                     this.loadData(true);
+                    this.applyDashboardFilters();
                 }
             }
         },
@@ -1335,12 +1507,139 @@
             if(this.refreshInterval) clearInterval(this.refreshInterval);
             if(this.visibilityHandler) document.removeEventListener('visibilitychange', this.visibilityHandler);
             this.dataRevision++;
+            this.dashboardGeneration++; this.dashboardExportGeneration++;
         },
         methods: {
+            formatDashboardNumber(value) { return value === null || value === undefined ? '—' : Number(value).toLocaleString('th-TH', { maximumFractionDigits: 4 }); },
+            formatDashboardSigned(value) { return (Number(value) > 0 ? '+' : '') + this.formatDashboardNumber(value); },
+            dashboardTypeLabel(type) { return { in: 'รับเข้า', out: 'เบิกออก', adjust: 'ปรับสต็อก' }[type] || type; },
+            dashboardTrendDateLabel(date) { return date.length === 7 ? date.slice(5, 7) + '/' + date.slice(2, 4) : date.slice(8, 10) + '/' + date.slice(5, 7); },
+            resetDashboardTrendSelection() { this.dashboardTrendDate = this.dashboardSelectedTrend?.date || ''; },
+            dashboardFilterChanged() {
+                this.dashboardGeneration++; this.dashboardExportGeneration++;
+                this.dashboardReport = null; this.dashboardApplied = null; this.dashboardLoading = false; this.dashboardError = ''; this.dashboardValidation = '';
+                this.dashboardExporting = false; this.dashboardExportError = '';
+                this.dashboardTrendDate = '';
+            },
+            setDashboardPreset() {
+                if (this.dashboardFilters.preset !== 'custom') Object.assign(this.dashboardFilters, w5DashboardDates(this.dashboardFilters.preset));
+                this.dashboardFilterChanged();
+            },
+            clearDashboardFilters() {
+                this.dashboardFilters = { preset: '30d', ...w5DashboardDates('30d'), productId: '', type: '', user: null, query: '' };
+                this.dashboardFilterChanged();
+                return this.applyDashboardFilters();
+            },
+            getDashboardFilters() {
+                const draft = this.dashboardFilters;
+                if (draft.preset !== 'custom') Object.assign(draft, w5DashboardDates(draft.preset));
+                const validDate = value => /^[1-9]\d{3}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value + 'T00:00:00Z')) && new Date(value + 'T00:00:00Z').toISOString().slice(0, 10) === value;
+                if (draft.preset !== 'all' && (!validDate(draft.startDate) || !validDate(draft.endDate) || draft.startDate > draft.endDate)) {
+                    this.dashboardValidation = 'เลือกวันที่เริ่มต้นและสิ้นสุดให้ถูกต้อง วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด';
+                    return null;
+                }
+                if (draft.query.trim().length > 200) { this.dashboardValidation = 'ค้นข้อความได้ไม่เกิน 200 ตัวอักษร'; return null; }
+                return { startDate: draft.startDate || null, endDate: draft.endDate || null, productId: draft.productId === '' ? null : Number(draft.productId), type: draft.type || null, user: draft.user ?? null, query: draft.query.trim() };
+            },
+            async applyDashboardFilters() {
+                this.dashboardFilterChanged();
+                const filters = this.getDashboardFilters();
+                if (!filters) return;
+                this.dashboardApplied = filters;
+                return this.loadDashboard(filters, 0, null, null);
+            },
+            refreshDashboard() { this.loadData(true); return this.applyDashboardFilters(); },
+            showDashboardProduct(item) {
+                if (!item.productId) return;
+                this.dashboardFilters.productId = item.productId;
+                this.dashboardView = 'history';
+                return this.applyDashboardFilters();
+            },
+            changeDashboardPage(direction) {
+                const report = this.dashboardReport;
+                if (!report || this.dashboardLoading) return;
+                const offset = direction > 0 ? report.page.nextOffset : Math.max(0, report.page.offset - report.page.limit);
+                if (direction > 0 && !report.page.hasMore) return;
+                return this.loadDashboard({ ...this.dashboardApplied }, offset, report.snapshotAt, report.snapshotToken);
+            },
+            async requestDashboard(filters, token, owner) {
+                if (!this.isAuthorized || !owner || !token || !isCurrentW5Session(owner, token)) throw new Error('stale_session');
+                if (this.dataMutationPending) throw new Error('pending_mutation');
+                if (window.isPreviewEnv) throw new Error('preview_report_unavailable');
+                const response = await fetch(WEB_APP_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ action: 'getDashboard', token, filters }) });
+                const data = await response.json();
+                if (!isCurrentW5Session(owner, token)) throw new Error('stale_session');
+                if (response.status === 401 || response.status === 403) { this.invalidateSession(); throw new Error('stale_session'); }
+                const report = data.dashboard;
+                if (!response.ok || data.success === false || !report || !Number.isInteger(report.total) || !Array.isArray(report.history) || !report.page || !report.summary || !report.inventory || !report.options || !Array.isArray(report.trends) || !Array.isArray(report.productSummary)) throw new Error(data.error || 'dashboard_unavailable');
+                return data.dashboard;
+            },
+            async loadDashboard(filters, offset, snapshotAt, snapshotToken) {
+                const generation = ++this.dashboardGeneration, owner = appUser, token = getW5Token();
+                this.dashboardLoading = true; this.dashboardError = ''; this.dashboardReport = null;
+                try {
+                    if (await AppVersionGuard.blockIfStale('getDashboard')) throw new Error('stale_version');
+                    if (generation !== this.dashboardGeneration || !isCurrentW5Session(owner, token)) return;
+                    const report = await this.requestDashboard({ ...filters, limit: 50, offset, snapshotAt, snapshotToken }, token, owner);
+                    if (generation !== this.dashboardGeneration || !isCurrentW5Session(owner, token)) return;
+                    if (snapshotAt && (report.snapshotAt !== snapshotAt || report.snapshotToken !== snapshotToken)) throw new Error('dashboard_snapshot_changed');
+                    this.dashboardReport = report;
+                    this.resetDashboardTrendSelection();
+                    this.dashboardInventory = report.inventory;
+                    this.dashboardOptions = report.options;
+                } catch (error) {
+                    if (generation !== this.dashboardGeneration || !isCurrentW5Session(owner, token) || !this.isAuthorized) return;
+                    this.dashboardError = error.message === 'dashboard_snapshot_changed' ? 'ข้อมูลประวัติถูกแก้ไขระหว่างเปิดรายงาน กรุณาค้นข้อมูลอีกครั้งเพื่อเริ่มชุดข้อมูลใหม่' : error.message === 'pending_mutation' ? 'กำลังบันทึกรายการ กรุณารอแล้วค้นข้อมูลอีกครั้ง' : error.message === 'stale_version' ? 'แอปมีเวอร์ชันใหม่ กรุณาโหลดหน้าใหม่ก่อนค้นข้อมูล' : window.isPreviewEnv ? 'โหมดตัวอย่างยังไม่มีรายงานย้อนหลังจากฐานข้อมูล' : 'โหลดรายงาน W5 ไม่สำเร็จ กรุณาลองอีกครั้ง หากยังไม่ได้ ให้ตรวจว่าระบบรายงานพร้อมใช้งาน';
+                } finally {
+                    if (generation === this.dashboardGeneration) this.dashboardLoading = false;
+                }
+            },
+            async exportDashboardCSV() {
+                const report = this.dashboardReport;
+                if (!report || !report.total || this.dashboardExporting) return;
+                const generation = ++this.dashboardExportGeneration, readGeneration = this.dashboardGeneration, owner = appUser, token = getW5Token(), filters = { ...this.dashboardApplied };
+                const current = () => generation === this.dashboardExportGeneration && readGeneration === this.dashboardGeneration && this.isAuthorized && isCurrentW5Session(owner, token);
+                this.dashboardExporting = true; this.dashboardExportProgress = 0; this.dashboardExportError = '';
+                try {
+                    if (await AppVersionGuard.blockIfStale('getDashboard')) throw new Error('stale_version');
+                    const rows = [], identities = new Set();
+                    let offset = 0;
+                    do {
+                        if (!current()) return;
+                        const page = await this.requestDashboard({ ...filters, limit: 100, offset, snapshotAt: report.snapshotAt, snapshotToken: report.snapshotToken }, token, owner);
+                        if (!current()) return;
+                        if (page.snapshotAt !== report.snapshotAt || page.snapshotToken !== report.snapshotToken || page.total !== report.total || page.page.offset !== offset) throw new Error('incomplete_export');
+                        for (const row of page.history) {
+                            if (!row.id || identities.has(row.id)) throw new Error('duplicate_export_row');
+                            identities.add(row.id); rows.push(row);
+                        }
+                        this.dashboardExportProgress = rows.length;
+                        if (!page.page.hasMore) break;
+                        if (!(page.page.nextOffset > offset) || rows.length >= report.total) throw new Error('incomplete_export');
+                        offset = page.page.nextOffset;
+                    } while (true);
+                    if (rows.length !== report.total) throw new Error('incomplete_export');
+                    if (!current()) return;
+                    const cells = [['รหัสรายการ', 'วันที่รายการ (ไทย)', 'วันที่เดิม', 'เวลาเดิม', 'ที่มาวันที่', 'ประเภท', 'รหัสสินค้า', 'ชื่อสินค้าเดิม', 'จำนวนมีเครื่องหมาย', 'หน่วยเดิม', 'ผู้ทำรายการ', 'รหัสอ้างอิง GR', 'เวลาบันทึกเข้าระบบ']];
+                    rows.forEach(row => cells.push([row.id, this.formatDate(row.eventAt), row.date, row.time, row.dateSource === 'createdAtFallback' ? 'เวลาบันทึกเข้าระบบ (วันที่เดิมไม่สมบูรณ์)' : 'วันที่รายการเดิม', this.dashboardTypeLabel(row.type), row.productId, row.productName, row.signedQty, row.unit || 'ไม่ระบุหน่วยเดิม', row.user, row.refGrItemId, row.createdAt]));
+                    const csv = '\uFEFF' + cells.map(row => row.map(w5DashboardCsvCell).join(',')).join('\r\n');
+                    const link = document.createElement('a');
+                    const objectUrl = typeof Blob === 'function' && typeof URL.createObjectURL === 'function' ? URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' })) : null;
+                    link.setAttribute('href', objectUrl || 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv));
+                    link.setAttribute('download', 'W5_History_' + (filters.startDate || 'all') + '_' + (filters.endDate || 'available') + '.csv');
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+                } catch (error) {
+                    if (current()) this.dashboardExportError = error.message === 'dashboard_snapshot_changed' ? 'ข้อมูลประวัติถูกแก้ไขระหว่างส่งออก ยังไม่ได้ดาวน์โหลดไฟล์ กรุณาค้นข้อมูลใหม่แล้วส่งออกอีกครั้ง' : 'ส่งออกไม่สำเร็จ ยังไม่ได้ดาวน์โหลดไฟล์ กรุณาลองอีกครั้ง';
+                } finally { if (generation === this.dashboardExportGeneration) this.dashboardExporting = false; }
+            },
             invalidateSession() {
                 this.isAuthorized = false;
                 this.authMessage = 'บัญชีหรือสิทธิ์เปลี่ยนแล้ว กรุณาเข้าใช้งานจาก BUYMORETH และตรวจสอบผลรายการก่อนส่งซ้ำ';
                 this.dataRevision++;
+                this.dashboardFilterChanged();
+                this.dashboardInventory = null;
+                this.dashboardOptions = { products: [], users: [], range: { firstDate: null, lastDate: null } };
                 this.products = []; this.history = []; this.pickList = []; this.customTags = {}; this.masterSearchResults = [];
                 appUser = null; currentUser = null; sessionToken = null;
             },
@@ -1669,6 +1968,7 @@
                 this.isLoading = true; this.isSilentLoading = false;
                 this.dataRevision++;
                 this.dataMutationPending = true;
+                this.dashboardFilterChanged(); this.dashboardInventory = null;
                 try {
                     const bodyPayload = { ...payload, token };
                     const response = await fetch(WEB_APP_URL, {
